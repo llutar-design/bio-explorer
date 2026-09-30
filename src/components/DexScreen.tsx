@@ -20,6 +20,8 @@ interface Props {
   save: SaveData;
   storageOk: boolean;
   onBack: () => void;
+  /** 돌아가기 버튼 글자 (홈/탐험) */
+  backLabel: string;
   onReset: () => void;
 }
 
@@ -29,7 +31,7 @@ const FILTERS: Array<{ id: Filter; label: string }> = [
   { id: 'other', label: '다른 동물' },
 ];
 
-export function DexScreen({ save, storageOk, onBack, onReset }: Props) {
+export function DexScreen({ save, storageOk, onBack, backLabel, onReset }: Props) {
   const counts = save.counts;
   const [filter, setFilter] = useState<Filter>('all');
   const [selected, setSelected] = useState<string | null>(null);
@@ -65,7 +67,7 @@ export function DexScreen({ save, storageOk, onBack, onReset }: Props) {
     <div className="screen dex">
       <header className="topbar dex-top">
         <button type="button" className="btn btn-light" onClick={onBack}>
-          <span aria-hidden="true">←</span> 탐험으로 돌아가기
+          <span aria-hidden="true">←</span> {backLabel}
         </button>
         <div className="dex-progress">
           <p className="dex-progress-text">
@@ -276,7 +278,9 @@ function Card({ creature, count, shiny, onOpen }: { creature: Creature; count: n
 function Detail({ creature, count, shiny, onClose }: { creature: Creature; count: number; shiny: number; onClose: () => void }) {
   const found = count > 0;
   const closeRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => closeRef.current?.focus(), []);
+  useEffect(() => {
+    closeRef.current?.focus();
+  }, []);
   return (
     <div className="overlay" onClick={onClose}>
       <div

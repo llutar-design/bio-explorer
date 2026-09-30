@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build && node -e \"require('fs').copyFileSync('dist/index.html','우리반-생물-탐험대.html')\"",
+    "build": "tsc --noEmit && vite build && node -e \"require('fs').copyFileSync('dist/index.html','초록-생물-도감.html')\"",
     "preview": "vite preview",
     "check:data": "node scripts/check-data.ts"
   },

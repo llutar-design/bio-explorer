@@ -4,23 +4,32 @@ import { emptySave, isStorageAvailable, loadSave, writeSave, type SaveData } fro
 import { applyFind, type FindEvents } from './game/progress.ts';
 import type { Grade } from './game/challenges.ts';
 import { setSoundEnabled, sfx } from './game/sound.ts';
+import { HomeScreen } from './components/HomeScreen.tsx';
 import { ExploreScreen } from './components/ExploreScreen.tsx';
 import { DexScreen } from './components/DexScreen.tsx';
-import { Logo, Mascot } from './art/SceneArt.tsx';
 
-type Screen = 'explore' | 'dex';
+// 화면: 홈(장소 고르기 + 찾은 생물 정원) → 탐험 → 도감
+type Screen = 'home' | 'explore' | 'dex';
 
 export default function App() {
   const [storageOk, setStorageOk] = useState(isStorageAvailable);
   const [save, setSave] = useState<SaveData>(() => (isStorageAvailable() ? loadSave() : emptySave()));
   const saveRef = useRef(save);
-  const [screen, setScreen] = useState<Screen>('explore');
+  const [screen, setScreen] = useState<Screen>('home');
+  const [dexFrom, setDexFrom] = useState<'home' | 'explore'>('home');
   const [habitat, setHabitat] = useState<HabitatId>('flower');
-  const [started, setStarted] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
-  useEffect(() => setSoundEnabled(save.sound), [save.sound]);
+  useEffect(() => {
+    setSoundEnabled(save.sound);
+  }, [save.sound]);
+
+  // 화면을 바꾸면 맨 위부터 보이게
+  // (최신 크롬은 scrollTo 가 값을 돌려주므로 반드시 중괄호로 감싸 아무것도 돌려주지 않게 합니다)
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [screen]);
 
   const commit = useCallback((next: SaveData) => {
     saveRef.current = next;
@@ -51,18 +60,16 @@ export default function App() {
     setNotice('탐험 기록을 모두 지웠어요.');
   };
 
-  // 시작 화면: 초점이 어디에 있든 엔터·스페이스바로 시작
-  useEffect(() => {
-    if (started) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Enter' && e.key !== ' ') return;
-      e.preventDefault();
-      setStarted(true);
-      sfx.appear();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [started]);
+  const goExplore = (h: HabitatId) => {
+    sfx.appear();
+    setHabitat(h);
+    setScreen('explore');
+  };
+
+  const openDex = (from: 'home' | 'explore') => {
+    setDexFrom(from);
+    setScreen('dex');
+  };
 
   useEffect(() => {
     if (!notice) return;
@@ -78,7 +85,17 @@ export default function App() {
         </div>
       )}
 
-      {screen === 'explore' ? (
+      {screen === 'home' && (
+        <HomeScreen
+          save={save}
+          storageOk={storageOk}
+          onGo={goExplore}
+          onOpenDex={() => openDex('home')}
+          onToggleSound={toggleSound}
+        />
+      )}
+
+      {screen === 'explore' && (
         <ExploreScreen
           habitat={habitat}
           onHabitat={(h) => {
@@ -88,45 +105,26 @@ export default function App() {
           save={save}
           onRecord={record}
           onToggleSound={toggleSound}
-          onOpenDex={() => setScreen('dex')}
+          onOpenDex={() => openDex('explore')}
+          onHome={() => {
+            sfx.tap();
+            setScreen('home');
+          }}
           onCelebrate={() => {
             sfx.rankUp();
             setCelebrating(true);
           }}
         />
-      ) : (
-        <DexScreen save={save} storageOk={storageOk} onBack={() => setScreen('explore')} onReset={reset} />
       )}
 
-      {!started && (
-        <div className="overlay start-overlay">
-          <div className="start-card" role="dialog" aria-modal="true" aria-labelledby="start-title">
-            <div className="start-hero">
-              <Logo />
-              <div className="start-mascot">
-                <Mascot mood="happy" />
-              </div>
-            </div>
-            <h1 id="start-title">우리 반 생물 탐험대</h1>
-            <p className="start-line">장소를 고르고, 흔들리는 곳을 눌러 숨은 생물을 찾아보세요!</p>
-            <button
-              type="button"
-              className="btn btn-primary btn-big"
-              onClick={() => {
-                setStarted(true);
-                sfx.appear();
-              }}
-              autoFocus
-            >
-              탐험 시작!
-            </button>
-            <p className="start-note">
-              {storageOk
-                ? '이 브라우저에 탐험 기록이 저장돼요. 같은 기기·같은 브라우저를 쓰면 기록도 함께 써요.'
-                : '지금은 기록이 저장되지 않아요. 창을 닫으면 기록이 사라져요.'}
-            </p>
-          </div>
-        </div>
+      {screen === 'dex' && (
+        <DexScreen
+          save={save}
+          storageOk={storageOk}
+          backLabel={dexFrom === 'home' ? '홈으로 돌아가기' : '탐험으로 돌아가기'}
+          onBack={() => setScreen(dexFrom)}
+          onReset={reset}
+        />
       )}
 
       {celebrating && (
@@ -140,10 +138,10 @@ export default function App() {
             <p className="celebrate-emoji" aria-hidden="true">🎉</p>
             <h2 id="celebrate-title">축하해요!</h2>
             <p>수집할 생물 {TOTAL}가지를 모두 발견했어요!</p>
-            <p className="celebrate-sub">반짝이는 생물과 남은 배지도 모아 볼까요?</p>
+            <p className="celebrate-sub">홈 화면 정원에서 친구들을 만나 보세요!</p>
             <div className="dialog-actions">
-              <button type="button" className="btn btn-light" onClick={() => { setCelebrating(false); setScreen('dex'); }}>
-                도감 보기
+              <button type="button" className="btn btn-light" onClick={() => { setCelebrating(false); setScreen('home'); }}>
+                🏠 홈에서 보기
               </button>
               <button type="button" className="btn btn-primary" onClick={() => setCelebrating(false)} autoFocus>
                 계속 탐험하기

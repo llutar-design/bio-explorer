@@ -8,7 +8,6 @@ import {
   getHabitat,
   type Creature,
   type HabitatId,
-  type Tool,
 } from '../data/creatures.ts';
 import {
   creaturePosition,
@@ -17,14 +16,7 @@ import {
   withIGa,
   type PlacedSpot,
 } from '../game/logic.ts';
-import {
-  SHINY_CHANCE,
-  missionHabitat,
-  missionText,
-  rankOf,
-  type FindEvents,
-  type Mission,
-} from '../game/progress.ts';
+import { SHINY_CHANCE, missionText, type FindEvents } from '../game/progress.ts';
 import type { SaveData } from '../game/storage.ts';
 import { sfx } from '../game/sound.ts';
 import { CreatureArt } from '../art/CreatureArt.tsx';
@@ -32,6 +24,7 @@ import { BookIcon, HabitatIcon, Logo, Mascot, SceneDecor, SpotArt, ToolArt } fro
 import { usePrefersReducedMotion } from '../hooks.ts';
 import { CHALLENGE_INFO, GRADE_TEXT, isActionKey, type Grade } from '../game/challenges.ts';
 import { Challenge } from './Challenge.tsx';
+import { MissionList, RankCard } from './ProgressBits.tsx';
 
 interface Props {
   habitat: HabitatId;
@@ -41,6 +34,7 @@ interface Props {
   onToggleSound: () => void;
   onOpenDex: () => void;
   onCelebrate: () => void;
+  onHome: () => void;
 }
 
 type Phase = 'idle' | 'appear' | 'catch' | 'caught' | 'release';
@@ -65,7 +59,7 @@ interface ResultToast {
 
 const CHEERS = ['멋져요!', '대단해요!', '최고의 탐험가!', '와, 찾았다!', '잘했어요!'];
 
-export function ExploreScreen({ habitat, onHabitat, save, onRecord, onToggleSound, onOpenDex, onCelebrate }: Props) {
+export function ExploreScreen({ habitat, onHabitat, save, onRecord, onToggleSound, onOpenDex, onCelebrate, onHome }: Props) {
   const reduced = usePrefersReducedMotion();
   const [layout, setLayout] = useState<PlacedSpot[]>(() => makeLayout(habitat));
   const [phase, setPhase] = useState<Phase>('idle');
@@ -205,8 +199,6 @@ export function ExploreScreen({ habitat, onHabitat, save, onRecord, onToggleSoun
   const found = countDiscovered(counts);
   const here = CREATURES.filter((c) => c.habitat === habitat);
   const hereFound = here.filter((c) => (counts[c.id] ?? 0) > 0).length;
-  const { rank, next } = rankOf(save.stars);
-  const rankPct = next ? Math.min(100, ((save.stars - rank.min) / (next.min - rank.min)) * 100) : 100;
 
   let hint: string;
   let mood: 'idle' | 'wow' | 'happy' = 'idle';
@@ -229,8 +221,12 @@ export function ExploreScreen({ habitat, onHabitat, save, onRecord, onToggleSoun
     <div className="screen explore">
       <header className="topbar">
         <div className="brand">
+          <button type="button" className="btn btn-light home-btn" onClick={onHome} aria-label="홈으로 가기">
+            <span aria-hidden="true">🏠</span>
+            <span className="home-label">홈</span>
+          </button>
           <Logo />
-          <h1 className="brand-name">우리 반 생물 탐험대</h1>
+          <h1 className="brand-name">초록 생물 도감</h1>
         </div>
         <div className="topbar-right">
           <div className="progress-chip" aria-label={`발견한 생물 ${found}/${TOTAL}`}>
@@ -281,26 +277,8 @@ export function ExploreScreen({ habitat, onHabitat, save, onRecord, onToggleSoun
       </nav>
 
       <section className="mission-bar" aria-label="나의 등급과 탐험 미션">
-        <div className="rank-card" aria-label={`${rank.name}, 별 ${save.stars}개`}>
-          <span className="rank-icon" aria-hidden="true">
-            {rank.icon}
-          </span>
-          <div className="rank-info">
-            <p className="rank-name">{rank.name}</p>
-            <p className="rank-stars">
-              ⭐ {save.stars}
-              {next && <small> / {next.min}</small>}
-            </p>
-            <div className="mini-bar" aria-hidden="true">
-              <span style={{ width: `${rankPct}%` }} />
-            </div>
-          </div>
-        </div>
-        <ul className="missions" aria-label="탐험 미션">
-          {save.missions.map((m) => (
-            <MissionChip key={m.id} mission={m} />
-          ))}
-        </ul>
+        <RankCard stars={save.stars} />
+        <MissionList missions={save.missions} />
       </section>
 
       <main className={`scene scene--${habitat}${phase === 'appear' ? ' is-playing' : ''}`} aria-label={`${getHabitat(habitat).name} 탐험`}>
@@ -380,40 +358,6 @@ export function ExploreScreen({ habitat, onHabitat, save, onRecord, onToggleSoun
         </div>
       </footer>
     </div>
-  );
-}
-
-function MissionChip({ mission }: { mission: Mission }) {
-  const h = missionHabitat(mission);
-  let icon;
-  if (mission.kind === 'tool') {
-    icon = <ToolArt tool={mission.target as Tool} />;
-  } else if (h) {
-    icon = <HabitatIcon id={h} />;
-  } else if (mission.kind === 'group') {
-    icon = <span>{mission.target === 'insect' ? '🐞' : '🐸'}</span>;
-  } else if (mission.kind === 'perfect') {
-    icon = <span>🎖️</span>;
-  } else {
-    icon = <span>✨</span>;
-  }
-  return (
-    <li className={`mission${mission.done ? ' is-done' : ''}`}>
-      <span className="mission-icon" aria-hidden="true">
-        {icon}
-      </span>
-      <span className="mission-text">{missionText(mission)}</span>
-      <span className="mission-prog">
-        {mission.done ? (
-          <span className="stamp">성공!</span>
-        ) : (
-          <>
-            {mission.have}/{mission.need}
-            <small> ⭐{mission.reward}</small>
-          </>
-        )}
-      </span>
-    </li>
   );
 }
 
