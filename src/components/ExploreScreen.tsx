@@ -30,7 +30,7 @@ import { sfx } from '../game/sound.ts';
 import { CreatureArt } from '../art/CreatureArt.tsx';
 import { BookIcon, HabitatIcon, Logo, Mascot, SceneDecor, SpotArt, ToolArt } from '../art/SceneArt.tsx';
 import { usePrefersReducedMotion } from '../hooks.ts';
-import { CHALLENGE_INFO, GRADE_TEXT, type Grade } from '../game/challenges.ts';
+import { CHALLENGE_INFO, GRADE_TEXT, isActionKey, type Grade } from '../game/challenges.ts';
 import { Challenge } from './Challenge.tsx';
 
 interface Props {
@@ -114,6 +114,41 @@ export function ExploreScreen({ habitat, onHabitat, save, onRecord, onToggleSoun
     },
     [],
   );
+
+  // 탐험 화면 키보드: 1~4 장소 바꾸기 · ← → 탐색할 곳 고르기 · 스페이스/엔터 살펴보기
+  const keyRef = useRef<(e: KeyboardEvent) => void>(() => {});
+  keyRef.current = (e: KeyboardEvent) => {
+    if (phaseRef.current !== 'idle' || e.altKey || e.ctrlKey || e.metaKey || e.repeat) return;
+    if (document.querySelector('.overlay')) return; // 시작 안내·축하 창이 떠 있으면 무시
+    const n = Number(e.key);
+    if (n >= 1 && n <= HABITATS.length) {
+      e.preventDefault();
+      changeHabitat(HABITATS[n - 1].id);
+      return;
+    }
+    const spots = Array.from(document.querySelectorAll<HTMLButtonElement>('.scene .spot:not([disabled])')).sort(
+      (a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left,
+    );
+    if (spots.length === 0) return;
+    const at = spots.indexOf(document.activeElement as HTMLButtonElement);
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      e.preventDefault();
+      const step = e.key === 'ArrowRight' ? 1 : -1;
+      const next = at < 0 ? (step > 0 ? 0 : spots.length - 1) : (at + step + spots.length) % spots.length;
+      spots[next].focus();
+      return;
+    }
+    // 아무것도 고르지 않은 채 스페이스/엔터 → 첫 번째 탐색할 곳을 골라 줌
+    if (isActionKey(e.key) && !(document.activeElement instanceof HTMLButtonElement)) {
+      e.preventDefault();
+      spots[0].focus();
+    }
+  };
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => keyRef.current(e);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   const onSpot = (spot: PlacedSpot) => {
     if (phaseRef.current !== 'idle') return;
@@ -233,6 +268,9 @@ export function ExploreScreen({ habitat, onHabitat, save, onRecord, onToggleSoun
               onClick={() => changeHabitat(h.id)}
             >
               <HabitatIcon id={h.id} />
+              <kbd className="key-hint" aria-hidden="true">
+                {HABITATS.indexOf(h) + 1}
+              </kbd>
               <span className="habitat-name">{h.name}</span>
               <span className="habitat-count">
                 {got}/{list.length}
@@ -338,6 +376,7 @@ export function ExploreScreen({ habitat, onHabitat, save, onRecord, onToggleSoun
             {hint}
           </p>
           <p className="hint-sub">게임에서는 수집하고, 자연에서는 눈으로 관찰해요!</p>
+          <p className="hint-keys">⌨️ 키보드: 숫자 1~4 장소 · ← → 고르기 · 스페이스 살펴보기</p>
         </div>
       </footer>
     </div>

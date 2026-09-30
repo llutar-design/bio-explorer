@@ -13,6 +13,8 @@ import {
   ringZone,
   sneakState,
   swimState,
+  holeFromKey,
+  isActionKey,
   type Grade,
 } from '../game/challenges.ts';
 import { sfx } from '../game/sound.ts';
@@ -44,6 +46,38 @@ function useClock(speed: number) {
   }, []);
   const now = () => (performance.now() - start.current) * speed;
   return { t: now(), now };
+}
+
+/**
+ * 키보드 조작. handler 가 true 를 돌려주면 그 키를 여기서 처리한 것으로 보고
+ * 브라우저 기본 동작(포커스된 버튼 누르기, 화면 스크롤 등)을 막습니다.
+ */
+function useKeys(handler: (key: string) => boolean) {
+  const ref = useRef(handler);
+  ref.current = handler;
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      if (e.repeat) {
+        if (isActionKey(e.key)) e.preventDefault(); // 꾹 누르고 있어도 한 번만
+        return;
+      }
+      if (ref.current(e.key)) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+    // 스페이스바는 손을 뗄 때 버튼이 눌리므로 그것도 막아요 (두 번 처리 방지)
+    const up = (e: KeyboardEvent) => {
+      if (isActionKey(e.key)) e.preventDefault();
+    };
+    window.addEventListener('keydown', down, true);
+    window.addEventListener('keyup', up, true);
+    return () => {
+      window.removeEventListener('keydown', down, true);
+      window.removeEventListener('keyup', up, true);
+    };
+  }, []);
 }
 
 /** 잠깐 떴다 사라지는 말풍선 (“아깝다!” 등) */
@@ -144,6 +178,7 @@ function RingGame({ creature, x, y, reduced, onSuccess }: ChallengeProps) {
     }
     succeed(z, x, y);
   };
+  useKeys((k) => (isActionKey(k) ? (tap(), true) : false));
 
   return (
     <div className="challenge-hit-area" onClick={tap}>
@@ -180,9 +215,10 @@ function GaugeGame({ creature, x, y, reduced, onSuccess }: ChallengeProps) {
     }
     succeed(z, x, cy);
   };
+  useKeys((k) => (isActionKey(k) ? (tap(), true) : false));
 
   return (
-    <div className="challenge-hit-area">
+    <div className="challenge-hit-area" onClick={tap}>
       <Sprite creature={creature} x={x} y={cy} hit={zone !== 'miss'} onTap={tap} className="is-hopping" />
       <div className="ch-panel">
         <div className="gauge" aria-hidden="true">
@@ -190,8 +226,16 @@ function GaugeGame({ creature, x, y, reduced, onSuccess }: ChallengeProps) {
           <span className="gauge-perfect" style={{ left: `${(0.5 - perfect) * 100}%`, width: `${perfect * 200}%` }} />
           <span className={`gauge-pointer zone-${zone}`} style={{ left: `${p * 100}%` }} />
         </div>
-        <button type="button" className="btn btn-primary ch-action" data-hit={zone !== 'miss' ? 'true' : 'false'} onClick={tap}>
-          잡기!
+        <button
+          type="button"
+          className="btn btn-primary ch-action"
+          data-hit={zone !== 'miss' ? 'true' : 'false'}
+          onClick={(e) => {
+            e.stopPropagation();
+            tap();
+          }}
+        >
+          잡기! <kbd>스페이스</kbd>
         </button>
       </div>
       <Feedback fb={fb} x={x} y={cy} />
@@ -212,20 +256,27 @@ function ChaseGame({ creature, x, y, reduced, onSuccess }: ChallengeProps) {
   const cx = x + (st.x - x) * k;
   const cy = y + (st.y - y) * k;
 
+  // 곤충을 직접 누르면: 날고 있을 때 “완벽해요!”, 쉬고 있을 때 “좋아요!”
   const tap = () => {
     if (done.current) return;
     const now = chaseState(clock.now(), assist);
     succeed(now.resting ? 'good' : 'perfect', cx, cy);
   };
-  const missTap = () => {
+  // 화면 아무 곳이나 누르거나 스페이스바: 곤충이 쉬고 있을 때(“지금!”) 성공
+  const anywhere = (how: 'screen' | 'key') => {
     if (done.current) return;
+    if (chaseState(clock.now(), assist).resting) {
+      succeed('good', cx, cy);
+      return;
+    }
     setMisses((m) => m + 1);
-    show('앗, 놓쳤어요! 멈출 때를 노려 봐요');
+    show(how === 'key' ? '“지금!”이 뜨면 스페이스바를 눌러요' : '앗, 놓쳤어요! 멈출 때를 노려 봐요');
     sfx.miss();
   };
+  useKeys((k) => (isActionKey(k) ? (anywhere('key'), true) : false));
 
   return (
-    <div className="challenge-hit-area" onClick={missTap}>
+    <div className="challenge-hit-area" onClick={() => anywhere('screen')}>
       <Sprite
         creature={creature}
         x={cx}
@@ -277,10 +328,11 @@ function SneakGame({ creature, x, y, reduced, onSuccess }: ChallengeProps) {
       succeed(b === 0 ? 'perfect' : b === 1 ? 'good' : 'ok', x, cy);
     }
   };
+  useKeys((k) => (isActionKey(k) ? (tap(), true) : false));
 
   const bubble = look === 'away' ? '🎵' : look === 'warn' ? '❗' : '👀';
   return (
-    <div className="challenge-hit-area">
+    <div className="challenge-hit-area" onClick={tap}>
       <Sprite
         creature={creature}
         x={x}
@@ -310,9 +362,12 @@ function SneakGame({ creature, x, y, reduced, onSuccess }: ChallengeProps) {
           type="button"
           className="btn btn-primary ch-action"
           data-hit={look !== 'look' && !frozen ? 'true' : 'false'}
-          onClick={tap}
+          onClick={(e) => {
+            e.stopPropagation();
+            tap();
+          }}
         >
-          살금살금 👣
+          살금살금 👣 <kbd>스페이스</kbd>
         </button>
       </div>
       <Feedback fb={fb} x={x} y={cy} />
@@ -348,6 +403,18 @@ function HideGame({ creature, x, y, reduced, onSuccess }: ChallengeProps) {
     show(now.stage === 'wiggle' && now.hole === i ? '곧 나와요! 조금만 기다려요' : '여기는 없어요!');
     sfx.miss();
   };
+  useKeys((k) => {
+    const i = holeFromKey(k);
+    if (i !== null) {
+      tap(i);
+      return true;
+    }
+    if (isActionKey(k)) {
+      show('숫자 1, 2, 3으로 골라요!');
+      return true;
+    }
+    return false;
+  });
 
   return (
     <div className="challenge-hit-area">
@@ -373,6 +440,9 @@ function HideGame({ creature, x, y, reduced, onSuccess }: ChallengeProps) {
             <span className="hide-art" aria-hidden="true">
               <SpotArt kind={cover} variant={i} />
             </span>
+            <kbd className="hide-key" aria-hidden="true">
+              {i + 1}
+            </kbd>
           </button>
         );
       })}
@@ -397,17 +467,15 @@ function SwimGame({ creature, reduced, onSuccess }: ChallengeProps) {
       succeed(now.upFrac < 0.5 ? 'perfect' : 'good', now.x, now.y);
       return;
     }
-    missTap();
-  };
-  const missTap = () => {
-    if (done.current) return;
     setMisses((m) => m + 1);
     show('물 위로 떠오르면 떠요!');
     sfx.miss();
   };
+  useKeys((k) => (isActionKey(k) ? (tap(), true) : false));
 
+  // 화면 어디를 눌러도 “지금 뜨기”로 처리
   return (
-    <div className="challenge-hit-area" onClick={missTap}>
+    <div className="challenge-hit-area" onClick={tap}>
       <Sprite
         creature={creature}
         x={st.x}
@@ -443,10 +511,26 @@ const GAMES = {
 export function Challenge(props: ChallengeProps) {
   const Game = GAMES[props.creature.challenge];
   const info = CHALLENGE_INFO[props.creature.challenge];
+  const rootRef = useRef<HTMLDivElement>(null);
+  // 미니게임이 시작되면 키보드 초점을 미니게임으로 옮겨요 (다른 버튼이 눌리지 않게)
+  useEffect(() => {
+    (document.activeElement as HTMLElement | null)?.blur?.();
+    rootRef.current?.focus({ preventScroll: true });
+  }, []);
   return (
-    <div className={`challenge challenge--${props.creature.challenge}`} data-kind={props.creature.challenge} data-name={props.creature.name}>
+    <div
+      ref={rootRef}
+      tabIndex={-1}
+      className={`challenge challenge--${props.creature.challenge}`}
+      data-kind={props.creature.challenge}
+      data-name={props.creature.name}
+      aria-label={`${info.name}: ${info.hint} (${info.keys})`}
+    >
       <div className="ch-banner" aria-hidden="true">
-        {info.icon} {info.name}
+        <span>
+          {info.icon} {info.name}
+        </span>
+        <small className="ch-keys">{info.keys}</small>
       </div>
       <Game {...props} />
     </div>

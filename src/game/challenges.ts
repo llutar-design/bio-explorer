@@ -9,14 +9,26 @@ export type Zone = Grade | 'miss';
 export const GRADE_BONUS: Record<Grade, number> = { perfect: 2, good: 1, ok: 0 };
 export const GRADE_TEXT: Record<Grade, string> = { perfect: '완벽해요!', good: '좋아요!', ok: '잘했어요!' };
 
-export const CHALLENGE_INFO: Record<ChallengeKind, { name: string; icon: string; hint: string }> = {
-  ring: { name: '링 맞추기', icon: '🎯', hint: '줄어드는 링이 초록색이 될 때 눌러요!' },
-  gauge: { name: '점프 타이밍', icon: '📏', hint: '막대가 초록색에 오면 “잡기!”를 눌러요!' },
-  chase: { name: '날쌘 곤충 잡기', icon: '🦋', hint: '날아다니는 곤충을 눌러요! 멈출 때가 기회예요.' },
-  sneak: { name: '살금살금', icon: '👣', hint: '딴 곳을 볼 때만 “살금살금”을 눌러 다가가요!' },
-  hide: { name: '숨바꼭질', icon: '🕳️', hint: '빼꼼 나온 곳을 눌러요! 흔들리는 곳을 잘 봐요.' },
-  swim: { name: '물속 그림자', icon: '💧', hint: '그림자가 물 위로 떠오르면 눌러요!' },
+/** name: 이름 · hint: 하는 방법 · keys: 화면/키보드 조작 안내 */
+export const CHALLENGE_INFO: Record<ChallengeKind, { name: string; icon: string; hint: string; keys: string }> = {
+  ring: { name: '링 맞추기', icon: '🎯', hint: '줄어드는 링이 초록색이 될 때 눌러요!', keys: '화면 어디든 누르기 · 스페이스바' },
+  gauge: { name: '점프 타이밍', icon: '📏', hint: '막대가 초록색에 오면 눌러요!', keys: '화면 어디든 누르기 · 스페이스바' },
+  chase: { name: '날쌘 곤충 잡기', icon: '🦋', hint: '날아다니는 곤충을 눌러요! 멈출 때가 기회예요.', keys: '곤충 누르기 · 멈추면 화면이나 스페이스바' },
+  sneak: { name: '살금살금', icon: '👣', hint: '딴 곳을 볼 때만 눌러서 다가가요!', keys: '화면 어디든 누르기 · 스페이스바' },
+  hide: { name: '숨바꼭질', icon: '🕳️', hint: '빼꼼 나온 곳을 눌러요! 흔들리는 곳을 잘 봐요.', keys: '숨은 곳 누르기 · 숫자 1 2 3' },
+  swim: { name: '물속 그림자', icon: '💧', hint: '그림자가 물 위로 떠오르면 눌러요!', keys: '화면 어디든 누르기 · 스페이스바' },
 };
+
+/** 키보드: 스페이스바·엔터를 ‘누르기’로 씁니다. */
+export const isActionKey = (key: string) => key === ' ' || key === 'Enter' || key === 'Spacebar';
+
+/** 숨바꼭질 키: 1·2·3 또는 ← ↓ → */
+export function holeFromKey(key: string): number | null {
+  if (key === '1' || key === 'ArrowLeft') return 0;
+  if (key === '2' || key === 'ArrowDown' || key === 'ArrowUp') return 1;
+  if (key === '3' || key === 'ArrowRight') return 2;
+  return null;
+}
 
 /** 이만큼 놓치면 쉬운 모드로 바뀝니다. */
 export const ASSIST_AFTER: Record<ChallengeKind, number> = { ring: 2, gauge: 2, chase: 3, sneak: 2, hide: 3, swim: 3 };

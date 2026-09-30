@@ -51,6 +51,19 @@ export default function App() {
     setNotice('탐험 기록을 모두 지웠어요.');
   };
 
+  // 시작 화면: 초점이 어디에 있든 엔터·스페이스바로 시작
+  useEffect(() => {
+    if (started) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      setStarted(true);
+      sfx.appear();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [started]);
+
   useEffect(() => {
     if (!notice) return;
     const t = window.setTimeout(() => setNotice(null), 2500);
