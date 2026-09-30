@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from 're
 import { TOTAL, getCreature, type HabitatId } from './data/creatures.ts';
 import { emptySave, isStorageAvailable, loadSave, writeSave, type SaveData } from './game/storage.ts';
 import { applyFind, type FindEvents } from './game/progress.ts';
+import type { Grade } from './game/challenges.ts';
 import { setSoundEnabled, sfx } from './game/sound.ts';
 import { ExploreScreen } from './components/ExploreScreen.tsx';
 import { DexScreen } from './components/DexScreen.tsx';
@@ -29,9 +30,9 @@ export default function App() {
 
   // 발견 1번을 기록합니다. (같은 생물이면 발견 횟수만 늘어요)
   const record = useCallback(
-    (id: string, shiny: boolean): FindEvents => {
+    (id: string, shiny: boolean, grade: Grade): FindEvents => {
       const creature = getCreature(id)!;
-      const { next, events } = applyFind(saveRef.current, creature, shiny);
+      const { next, events } = applyFind(saveRef.current, creature, shiny, grade);
       commit(next);
       return events;
     },

@@ -30,12 +30,14 @@ import { sfx } from '../game/sound.ts';
 import { CreatureArt } from '../art/CreatureArt.tsx';
 import { BookIcon, HabitatIcon, Logo, Mascot, SceneDecor, SpotArt, ToolArt } from '../art/SceneArt.tsx';
 import { usePrefersReducedMotion } from '../hooks.ts';
+import { CHALLENGE_INFO, GRADE_TEXT, type Grade } from '../game/challenges.ts';
+import { Challenge } from './Challenge.tsx';
 
 interface Props {
   habitat: HabitatId;
   onHabitat: (h: HabitatId) => void;
   save: SaveData;
-  onRecord: (id: string, shiny: boolean) => FindEvents;
+  onRecord: (id: string, shiny: boolean, grade: Grade) => FindEvents;
   onToggleSound: () => void;
   onOpenDex: () => void;
   onCelebrate: () => void;
@@ -50,6 +52,7 @@ interface Encounter {
   shiny: boolean;
   x: number;
   y: number;
+  grade?: Grade;
 }
 
 interface ResultToast {
@@ -59,12 +62,6 @@ interface ResultToast {
   /** 생물이 위쪽에 있으면 안내를 아래에 띄워 가리지 않게 */
   atBottom: boolean;
 }
-
-const TOOL_HINT: Record<Tool, string> = {
-  net: '눌러서 잠자리채로 잡아 보세요!',
-  scoop: '눌러서 뜰채로 떠 보세요!',
-  loupe: '눌러서 돋보기로 살펴보세요!',
-};
 
 const CHEERS = ['멋져요!', '대단해요!', '최고의 탐험가!', '와, 찾았다!', '잘했어요!'];
 
@@ -127,18 +124,26 @@ export function ExploreScreen({ habitat, onHabitat, save, onRecord, onToggleSoun
     const next: Encounter = { key: seq.current, spotKey: spot.key, creature, shiny, ...creaturePosition(spot, creature) };
     encRef.current = next;
     setEnc(next);
+    // 앞의 결과 안내가 미니게임을 가리지 않도록 바로 닫기
+    window.clearTimeout(toastTimer.current);
+    setToast(null);
     go('appear');
     sfx.search();
     if (shiny) sfx.appearShiny();
     else sfx.appear();
   };
 
-  const onCatch = () => {
-    const current = encRef.current;
-    if (phaseRef.current !== 'appear' || !current) return;
+  // 미니게임 성공 → 채집 연출
+  const onCatch = (grade: Grade, x: number, y: number) => {
+    const prev = encRef.current;
+    if (phaseRef.current !== 'appear' || !prev) return;
     go('catch'); // 잠금: 이후 누르기는 무시
+    const current: Encounter = { ...prev, x, y, grade };
+    encRef.current = current;
+    setEnc(current);
     sfx.catch();
-    const ev = onRecord(current.creature.id, current.shiny); // 도감에 바로 기록
+    if (grade === 'perfect') sfx.perfect();
+    const ev = onRecord(current.creature.id, current.shiny, grade); // 도감에 바로 기록
     const extras = ev.missionsCompleted.length + ev.newBadges.length + (ev.rankUp ? 1 : 0);
     const t = reduced ? { caught: 250, release: 1000, done: 1400 } : { caught: 700, release: 1700, done: 2600 };
     later(t.caught, () => {
@@ -172,9 +177,10 @@ export function ExploreScreen({ habitat, onHabitat, save, onRecord, onToggleSoun
   let mood: 'idle' | 'wow' | 'happy' = 'idle';
   if (phase === 'appear' && enc) {
     mood = 'wow';
+    const how = CHALLENGE_INFO[enc.creature.challenge].hint;
     hint = enc.shiny
-      ? `우와! 반짝반짝 빛나는 ${withIGa(enc.creature.name)} 나타났어요! ${TOOL_HINT[enc.creature.tool]}`
-      : `${withIGa(enc.creature.name)} 나타났어요! ${TOOL_HINT[enc.creature.tool]}`;
+      ? `우와! 반짝이는 ${withIGa(enc.creature.name)} 나타났어요! ${how}`
+      : `${withIGa(enc.creature.name)} 나타났어요! ${how}`;
   } else if (phase !== 'idle') {
     mood = 'happy';
     hint = `${cheer} 도감에 기록하고 자연으로 돌려보내요.`;
@@ -259,7 +265,7 @@ export function ExploreScreen({ habitat, onHabitat, save, onRecord, onToggleSoun
         </ul>
       </section>
 
-      <main className={`scene scene--${habitat}`} aria-label={`${getHabitat(habitat).name} 탐험`}>
+      <main className={`scene scene--${habitat}${phase === 'appear' ? ' is-playing' : ''}`} aria-label={`${getHabitat(habitat).name} 탐험`}>
         <SceneDecor habitat={habitat} />
 
         {layout.map((s) => (
@@ -278,26 +284,29 @@ export function ExploreScreen({ habitat, onHabitat, save, onRecord, onToggleSoun
           </button>
         ))}
 
-        {enc && (
+        {enc && phase === 'appear' && (
+          <div key={`ch-${enc.key}`} className={`challenge-wrap${enc.shiny ? ' is-shiny' : ''}`}>
+            <Challenge creature={enc.creature} x={enc.x} y={enc.y} reduced={reduced} onSuccess={onCatch} />
+          </div>
+        )}
+
+        {enc && phase !== 'appear' && (
           <div
             key={`enc-${enc.key}`}
             className={`encounter is-${phase} motion-${enc.creature.motion}${enc.shiny ? ' is-shiny' : ''}`}
             style={{ '--x': enc.x, '--y': enc.y } as CSSProperties}
           >
-            <button
-              type="button"
-              className="creature-btn"
-              onClick={onCatch}
-              aria-label={`${enc.shiny ? '반짝이는 ' : ''}${enc.creature.name} ${enc.creature.tool === 'loupe' ? '살펴보기' : '채집하기'}`}
-              aria-disabled={phase !== 'appear'}
-            >
+            <span className="creature-btn">
               <span className="creature-body">
                 <CreatureArt id={enc.creature.id} />
               </span>
-            </button>
-            {phase !== 'appear' && (
-              <div className={`tool tool--${enc.creature.tool}`} aria-hidden="true">
-                <ToolArt tool={enc.creature.tool} />
+            </span>
+            <div className={`tool tool--${enc.creature.tool}`} aria-hidden="true">
+              <ToolArt tool={enc.creature.tool} />
+            </div>
+            {enc.grade && enc.grade !== 'ok' && (
+              <div className={`grade-pop grade-${enc.grade}`} aria-hidden="true">
+                {GRADE_TEXT[enc.grade]}
               </div>
             )}
             {(phase === 'caught' || phase === 'release') && (
@@ -344,6 +353,8 @@ function MissionChip({ mission }: { mission: Mission }) {
     icon = <HabitatIcon id={h} />;
   } else if (mission.kind === 'group') {
     icon = <span>{mission.target === 'insect' ? '🐞' : '🐸'}</span>;
+  } else if (mission.kind === 'perfect') {
+    icon = <span>🎖️</span>;
   } else {
     icon = <span>✨</span>;
   }
@@ -380,7 +391,14 @@ function ResultCard({ toast }: { toast: ResultToast }) {
         </div>
         <div className="result-text">
           {ev.shiny && <p className="result-shiny">✨ 반짝반짝 생물!</p>}
-          <p className="result-title">{ev.isNew ? '새로운 생물 발견!' : '또 만났어요!'}</p>
+          <p className="result-title">
+            {ev.isNew ? '새로운 생물 발견!' : '또 만났어요!'}
+            {ev.gradeBonus > 0 && (
+              <span className={`grade-pill grade-${ev.grade}`}>
+                {GRADE_TEXT[ev.grade]} +{ev.gradeBonus}
+              </span>
+            )}
+          </p>
           <p className="result-name">{creature.name}</p>
           <p className="result-sub">
             {ev.isNew ? '도감에 새로 기록했어요' : `발견 ${ev.count}번째 · 도감에 기록했어요`}

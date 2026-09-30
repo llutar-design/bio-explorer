@@ -19,6 +19,7 @@ export const emptySave = (sound = true): SaveData => {
     stars: 0,
     totalFinds: 0,
     missionsDone: 0,
+    perfects: 0,
     missions: [],
     badges: [],
     sound,
@@ -58,7 +59,7 @@ function cleanMissions(v: unknown): Mission[] {
       !!m &&
       typeof m === 'object' &&
       typeof m.id === 'string' &&
-      ['habitat', 'group', 'new', 'tool', 'creature'].includes(m.kind) &&
+      ['habitat', 'group', 'new', 'tool', 'creature', 'perfect'].includes(m.kind) &&
       typeof m.target === 'string' &&
       typeof m.need === 'number' &&
       typeof m.have === 'number' &&
@@ -90,6 +91,7 @@ export function loadSave(): SaveData {
       stars,
       totalFinds: Math.max(finds, num(p.totalFinds, 0)),
       missionsDone: num(p.missionsDone, 0),
+      perfects: num(p.perfects, 0),
       missions: cleanMissions(p.missions),
       badges: Array.isArray(p.badges) ? p.badges.filter((b): b is string => typeof b === 'string') : [],
       sound: p.sound !== false,

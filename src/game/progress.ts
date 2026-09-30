@@ -13,6 +13,7 @@ import {
   type Tool,
 } from '../data/creatures.ts';
 import type { Rand } from './logic.ts';
+import { GRADE_BONUS, type Grade } from './challenges.ts';
 
 // ── 별 ──
 export const STAR_NEW = 3; // 새로운 생물 발견
@@ -30,12 +31,12 @@ export interface Rank {
 
 export const RANKS: Rank[] = [
   { min: 0, name: '새싹 탐험가', icon: '🌱' },
-  { min: 20, name: '꼬마 탐험가', icon: '🐣' },
-  { min: 60, name: '풀잎 탐험가', icon: '🍀' },
-  { min: 130, name: '숲속 탐험가', icon: '🌳' },
-  { min: 250, name: '척척 탐험가', icon: '🧭' },
-  { min: 450, name: '으뜸 탐험가', icon: '🏅' },
-  { min: 750, name: '생물 박사', icon: '🎓' },
+  { min: 25, name: '꼬마 탐험가', icon: '🐣' },
+  { min: 80, name: '풀잎 탐험가', icon: '🍀' },
+  { min: 170, name: '숲속 탐험가', icon: '🌳' },
+  { min: 320, name: '척척 탐험가', icon: '🧭' },
+  { min: 560, name: '으뜸 탐험가', icon: '🏅' },
+  { min: 950, name: '생물 박사', icon: '🎓' },
 ];
 
 export function rankOf(stars: number): { index: number; rank: Rank; next: Rank | null } {
@@ -47,7 +48,7 @@ export function rankOf(stars: number): { index: number; rank: Rank; next: Rank |
 }
 
 // ── 게임 상태 ──
-export type MissionKind = 'habitat' | 'group' | 'new' | 'tool' | 'creature';
+export type MissionKind = 'habitat' | 'group' | 'new' | 'tool' | 'creature' | 'perfect';
 
 export interface Mission {
   id: string;
@@ -66,6 +67,8 @@ export interface GameState {
   stars: number;
   totalFinds: number;
   missionsDone: number;
+  /** 미니게임에서 “완벽해요!”를 받은 횟수 */
+  perfects: number;
   missions: Mission[];
   badges: string[];
 }
@@ -97,6 +100,7 @@ export const BADGES: Badge[] = [
   { id: 'mission-5', name: '미션 도전자', icon: '🎯', desc: '미션 5개 성공하기', earned: (s) => s.missionsDone >= 5 },
   { id: 'mission-30', name: '미션 달인', icon: '🏆', desc: '미션 30개 성공하기', earned: (s) => s.missionsDone >= 30 },
   { id: 'finds-100', name: '부지런한 탐험가', icon: '👣', desc: '생물 100번 발견하기', earned: (s) => s.totalFinds >= 100 },
+  { id: 'perfect-10', name: '타이밍 달인', icon: '🎖️', desc: '“완벽해요!” 10번 받기', earned: (s) => s.perfects >= 10 },
   { id: 'dex-complete', name: '도감 완성', icon: '📖', desc: `${TOTAL}가지 모두 찾기`, earned: (s) => countDiscovered(s.counts) === TOTAL },
 ];
 
@@ -121,6 +125,8 @@ export function missionText(m: Mission): string {
       const c = getCreature(m.target);
       return c ? `${getHabitat(c.habitat).name}에서 ${c.name} 만나기` : '생물 만나기';
     }
+    case 'perfect':
+      return `“완벽해요!” ${m.need}번 받기`;
   }
 }
 
@@ -138,7 +144,7 @@ const pickOne = <T,>(list: T[], rand: Rand): T => list[Math.floor(rand() * list.
 function makeMission(s: GameState, others: Mission[], rand: Rand): Mission {
   const usedKinds = new Set(others.map((m) => m.kind));
   const undiscovered = CREATURES.filter((c) => !(s.counts[c.id] > 0));
-  let kinds: MissionKind[] = ['habitat', 'group', 'tool', 'creature'];
+  let kinds: MissionKind[] = ['habitat', 'group', 'tool', 'creature', 'perfect'];
   if (undiscovered.length > 0) kinds.push('new', 'creature');
   const fresh = kinds.filter((k) => !usedKinds.has(k));
   if (fresh.length > 0) kinds = fresh;
@@ -163,6 +169,9 @@ function makeMission(s: GameState, others: Mission[], rand: Rand): Mission {
   if (kind === 'new') {
     return { ...base, target: '', need: 1, reward: 5 };
   }
+  if (kind === 'perfect') {
+    return { ...base, target: '', need: 2, reward: 5 };
+  }
   // creature: 아직 못 찾은 생물을 더 자주 골라 도감 채우기를 도와요
   const pool = undiscovered.length > 0 && rand() < 0.7 ? undiscovered : CREATURES;
   const used = new Set(others.filter((m) => m.kind === 'creature').map((m) => m.target));
@@ -177,8 +186,9 @@ export function refreshMissions(s: GameState, rand: Rand = Math.random): Mission
   return list;
 }
 
-function matches(m: Mission, c: Creature, isNew: boolean): boolean {
+function matches(m: Mission, c: Creature, isNew: boolean, grade: Grade): boolean {
   switch (m.kind) {
+    case 'perfect': return grade === 'perfect';
     case 'habitat': return c.habitat === m.target;
     case 'group': return c.group === m.target;
     case 'new': return isNew;
@@ -192,6 +202,9 @@ export interface FindEvents {
   isNew: boolean;
   count: number;
   shiny: boolean;
+  /** 미니게임 결과 */
+  grade: Grade;
+  gradeBonus: number;
   starsGained: number;
   missionsCompleted: Mission[];
   newBadges: Badge[];
@@ -203,18 +216,20 @@ export function applyFind<S extends GameState>(
   prev: S,
   creature: Creature,
   shiny: boolean,
+  grade: Grade = 'ok',
   rand: Rand = Math.random,
 ): { next: S; events: FindEvents } {
   const before = prev.counts[creature.id] ?? 0;
   const isNew = before === 0;
   const counts = { ...prev.counts, [creature.id]: before + 1 };
   const shinyMap = shiny ? { ...prev.shiny, [creature.id]: (prev.shiny[creature.id] ?? 0) + 1 } : prev.shiny;
-  let stars = prev.stars + (isNew ? STAR_NEW : STAR_AGAIN) + (shiny ? STAR_SHINY : 0);
+  const gradeBonus = GRADE_BONUS[grade];
+  let stars = prev.stars + (isNew ? STAR_NEW : STAR_AGAIN) + (shiny ? STAR_SHINY : 0) + gradeBonus;
   let missionsDone = prev.missionsDone;
 
   const missionsCompleted: Mission[] = [];
   const missions = refreshMissions(prev, rand).map((m) => {
-    if (m.done || !matches(m, creature, isNew)) return m;
+    if (m.done || !matches(m, creature, isNew, grade)) return m;
     const have = Math.min(m.need, m.have + 1);
     const done = have >= m.need;
     const updated = { ...m, have, done };
@@ -232,6 +247,7 @@ export function applyFind<S extends GameState>(
     shiny: shinyMap,
     stars,
     totalFinds: prev.totalFinds + 1,
+    perfects: prev.perfects + (grade === 'perfect' ? 1 : 0),
     missionsDone,
     missions,
   };
@@ -251,6 +267,8 @@ export function applyFind<S extends GameState>(
       isNew,
       count: before + 1,
       shiny,
+      grade,
+      gradeBonus,
       starsGained: stars - prev.stars,
       missionsCompleted,
       newBadges,

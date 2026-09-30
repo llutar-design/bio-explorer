@@ -15,6 +15,18 @@ import {
   refreshMissions,
   type GameState,
 } from '../src/game/progress.ts';
+import {
+  CHALLENGE_INFO,
+  chaseState,
+  gaugePos,
+  gaugeZone,
+  hideState,
+  ringScale,
+  ringZone,
+  sneakState,
+  swimState,
+  type Grade,
+} from '../src/game/challenges.ts';
 
 let ok = true;
 const fail = (msg: string) => {
@@ -69,7 +81,7 @@ console.log(`무작위로 눌렀을 때 모두 모으기까지 발견 횟수: �
 
 // 재미 요소 점검: 별·등급·미션·배지가 모두 얻을 수 있는지 (무작위 놀이 흉내)
 {
-  const base: GameState = { counts: {}, shiny: {}, celebrated: false, stars: 0, totalFinds: 0, missionsDone: 0, missions: [], badges: [] };
+  const base: GameState = { counts: {}, shiny: {}, celebrated: false, stars: 0, totalFinds: 0, missionsDone: 0, perfects: 0, missions: [], badges: [] };
   let s: GameState = { ...base, missions: refreshMissions(base) };
   let celebrations = 0;
   let findsToComplete = 0;
@@ -80,7 +92,8 @@ console.log(`무작위로 눌렀을 때 모두 모으기까지 발견 횟수: �
     const layout = makeLayout(h.id);
     const spot = layout[Math.floor(Math.random() * layout.length)];
     const c = pickCreature(h.id, spot.kind, s.counts)!;
-    const r = applyFind(s, c, Math.random() < SHINY_CHANCE);
+    const g: Grade = (['perfect', 'good', 'good', 'ok'] as Grade[])[Math.floor(Math.random() * 4)];
+    const r = applyFind(s, c, Math.random() < SHINY_CHANCE, g);
     s = r.next;
     if (r.events.completedNow) { celebrations++; findsToComplete = n; }
     if (n === 60 || n === 180 || n === 300) {
@@ -94,6 +107,37 @@ console.log(`무작위로 눌렀을 때 모두 모으기까지 발견 횟수: �
   const missing = BADGES.filter((b) => !s.badges.includes(b.id)).map((b) => b.name);
   console.log(`재미 요소(600번 발견 흉내): 도감 완성 ${findsToComplete}번째, 별 ${s.stars}개(${rankOf(s.stars).rank.name}), 미션 ${s.missionsDone}개, 배지 ${s.badges.length}/${BADGES.length}${missing.length ? ' (못 받은 배지: ' + missing.join(', ') + ')' : ''}`);
   console.log(`등급 기준: ${RANKS.map((r) => `${r.icon}${r.name} ${r.min}`).join(' → ')}`);
+}
+
+// 미니게임 점검: 모든 생물에 미니게임이 있고, 각 미니게임에 성공할 수 있는 순간이 충분히 있는지
+{
+  const kinds = new Set(CREATURES.map((c) => c.challenge));
+  for (const c of CREATURES) if (!(c.challenge in CHALLENGE_INFO)) fail(`${c.name}: 미니게임 없음`);
+  const share = (fn: (t: number) => boolean, span: number) => {
+    let hit = 0;
+    for (let t = 0; t < span; t += 10) if (fn(t)) hit++;
+    return hit / (span / 10);
+  };
+  const report: string[] = [];
+  for (const assist of [false, true]) {
+    const r = {
+      ring: share((t) => ringZone(ringScale(t, assist), assist) !== 'miss', 20000),
+      gauge: share((t) => gaugeZone(gaugePos(t, assist), assist) !== 'miss', 20000),
+      chase: share((t) => chaseState(t, assist).resting, 20000),
+      sneak: share((t) => sneakState(t, assist) !== 'look', 20000),
+      hide: share((t) => hideState(t, assist).stage === 'peek', 20000),
+      swim: share((t) => swimState(t, assist).stage === 'up', 20000),
+    };
+    for (const [k, v] of Object.entries(r)) if (v < 0.15) fail(`${k}: 성공할 수 있는 시간이 너무 짧음 (${Math.round(v * 100)}%)`);
+    if (assist) for (const k of Object.keys(r) as Array<keyof typeof r>) if (r[k] < 0.3 && k !== 'hide') fail(`${k}: 쉬운 모드가 충분히 쉽지 않음`);
+    report.push(`${assist ? '쉬운 모드' : '보통'}: ` + Object.entries(r).map(([k, v]) => `${CHALLENGE_INFO[k as keyof typeof r].name} ${Math.round(v * 100)}%`).join(', '));
+  }
+  // 숨바꼭질: 세 곳 모두에서 나오는지
+  const holes = new Set<number>();
+  for (let t = 0; t < 30000; t += 50) holes.add(hideState(t, false).hole);
+  if (holes.size !== 3) fail('숨바꼭질: 세 곳에서 모두 나오지 않음');
+  console.log(`미니게임 ${kinds.size}종류 · 성공할 수 있는 시간 비율`);
+  report.forEach((l) => console.log('  ' + l));
 }
 
 console.log(ok ? '✓ 데이터 점검 통과' : '✗ 데이터 점검 실패');
