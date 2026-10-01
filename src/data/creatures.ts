@@ -20,8 +20,8 @@ export type SpotKind =
   | 'water';
 
 export type Group = 'insect' | 'other';
-/** net: 잠자리채(곤충), scoop: 뜰채(물속 생물), loupe: 돋보기(그 밖의 생물) */
-export type Tool = 'net' | 'scoop' | 'loupe';
+/** net: 잠자리채(곤충), scoop: 뜰채(물속·물 위 생물), loupe: 돋보기(그 밖의 생물), binoculars: 쌍안경(새 — 멀리서 관찰) */
+export type Tool = 'net' | 'scoop' | 'loupe' | 'binoculars';
 /** 자연으로 돌아갈 때의 움직임 */
 export type Motion = 'fly' | 'hop' | 'crawl' | 'swim';
 /**
@@ -136,7 +136,7 @@ export const HABITATS: Habitat[] = [
 ];
 
 export const CREATURES: Creature[] = [
-  // ── 곤충 14가지 ──
+  // ── 곤충 ──
   {
     id: 'ant', name: '개미', group: 'insect', kindLabel: '곤충',
     habitat: 'tree', spots: ['ground'], placeText: '나무 밑의 땅',
@@ -222,8 +222,45 @@ export const CREATURES: Creature[] = [
     fact: '머리가 뾰족하고 몸이 길쭉하며, 뒷다리가 아주 길어요.',
     tool: 'net', motion: 'hop', challenge: 'gauge',
   },
+  // ── 학교 주변에서 자주 보는 곤충 (추가) ──
+  {
+    id: 'hoverfly', name: '꽃등에', group: 'insect', kindLabel: '곤충',
+    habitat: 'flower', spots: ['flower'], placeText: '꽃밭',
+    fact: '벌처럼 보이지만 날개가 두 장인 파리 무리예요. 공중에 멈춘 듯 날 수 있어요.',
+    tool: 'net', motion: 'fly', challenge: 'chase',
+  },
+  {
+    id: 'stink-bug', name: '노린재', group: 'insect', kindLabel: '곤충',
+    habitat: 'flower', spots: ['leaf'], placeText: '꽃밭의 잎',
+    fact: '방패처럼 생긴 몸을 가졌고, 위험을 느끼면 고약한 냄새를 풍겨 자신을 지켜요.',
+    tool: 'net', motion: 'crawl', challenge: 'ring',
+  },
+  {
+    id: 'longhorn-beetle', name: '하늘소', group: 'insect', kindLabel: '곤충',
+    habitat: 'tree', spots: ['trunk'], placeText: '나무줄기',
+    fact: '아주 긴 더듬이를 가진 딱정벌레예요. 애벌레는 나무속에서 자라요.',
+    tool: 'net', motion: 'crawl', challenge: 'hide',
+  },
+  {
+    id: 'mole-cricket', name: '땅강아지', group: 'insect', kindLabel: '곤충',
+    habitat: 'grass', spots: ['soil'], placeText: '풀숲의 흙',
+    fact: '삽처럼 넓적한 앞다리로 땅속에 굴을 파며 살아요.',
+    tool: 'net', motion: 'crawl', challenge: 'hide',
+  },
+  {
+    id: 'water-strider', name: '소금쟁이', group: 'insect', kindLabel: '곤충',
+    habitat: 'pond', spots: ['water'], placeText: '연못 물 위',
+    fact: '가늘고 긴 다리로 물 위에 떠서 미끄러지듯 다녀요.',
+    tool: 'scoop', motion: 'swim', challenge: 'ring',
+  },
+  {
+    id: 'diving-beetle', name: '물방개', group: 'insect', kindLabel: '곤충',
+    habitat: 'pond', spots: ['water'], placeText: '연못 속',
+    fact: '물속에 사는 딱정벌레로, 넓적한 뒷다리로 노를 젓듯 헤엄쳐요. 숨을 쉬러 물 위로 올라와요.',
+    tool: 'scoop', motion: 'swim', challenge: 'swim',
+  },
 
-  // ── 다른 동물 6가지 ──
+  // ── 다른 동물 ──
   {
     id: 'snail', name: '달팽이', group: 'other', kindLabel: '연체동물',
     habitat: 'grass', spots: ['wetLeaf', 'stone'], placeText: '풀숲의 축축한 잎과 돌 주변',
@@ -260,6 +297,34 @@ export const CREATURES: Creature[] = [
     habitat: 'pond', spots: ['water'], placeText: '연못 속',
     fact: '몸이 작은 물고기로, 여럿이 무리 지어 물 위쪽에서 헤엄쳐요.',
     tool: 'scoop', motion: 'swim', challenge: 'swim',
+  },
+  // ── 학교 주변에서 자주 보는 다른 동물 (추가) ──
+  {
+    id: 'spider', name: '거미', group: 'other', kindLabel: '거미류',
+    habitat: 'flower', spots: ['leaf'], placeText: '꽃밭의 잎',
+    fact: '다리가 8개라서 곤충이 아니에요. 거미줄을 쳐서 먹이를 잡는 거미가 많아요.',
+    tool: 'loupe', motion: 'crawl', challenge: 'ring',
+    caution: '손으로 만지지 말고 눈으로만 관찰해요.',
+  },
+  {
+    id: 'slug', name: '민달팽이', group: 'other', kindLabel: '연체동물',
+    habitat: 'grass', spots: ['wetLeaf'], placeText: '풀숲의 축축한 잎',
+    fact: '달팽이와 닮았지만 등에 껍데기가 없어요. 축축한 곳을 좋아해요.',
+    tool: 'loupe', motion: 'crawl', challenge: 'hide',
+  },
+  {
+    id: 'sparrow', name: '참새', group: 'other', kindLabel: '조류(새)',
+    habitat: 'grass', spots: ['grass'], placeText: '풀숲',
+    fact: '갈색 깃털을 가진 작은 새로, 풀씨와 곤충을 먹어요. 무리 지어 다닐 때가 많아요.',
+    tool: 'binoculars', motion: 'hop', challenge: 'sneak',
+    caution: '새는 놀라지 않게 멀리서 조용히 관찰해요.',
+  },
+  {
+    id: 'magpie', name: '까치', group: 'other', kindLabel: '조류(새)',
+    habitat: 'tree', spots: ['branch'], placeText: '나뭇가지',
+    fact: '검은색과 흰색 깃털에 꼬리가 긴 새예요. 나뭇가지를 모아 큰 둥지를 지어요.',
+    tool: 'binoculars', motion: 'fly', challenge: 'sneak',
+    caution: '새는 놀라지 않게 멀리서 조용히 관찰해요.',
   },
 ];
 

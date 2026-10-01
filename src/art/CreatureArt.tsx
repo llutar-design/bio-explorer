@@ -547,6 +547,257 @@ function Medaka() {
   );
 }
 
+// ───────── 학교 주변 생물 (추가) ─────────
+
+/** 꽃등에: 벌을 닮았지만 날개가 2장인 파리 무리. 큰 겹눈, 털 없는 매끈한 배 */
+function Hoverfly() {
+  const leg = '#2f2a1e';
+  return (
+    <g>
+      <Mirror>
+        <S d="M53 50 L44 46 L40 39" stroke={leg} strokeWidth={2.2} />
+        <S d="M53 55 L42 58 L37 63" stroke={leg} strokeWidth={2.2} />
+        <S d="M54 61 L46 69 L44 78" stroke={leg} strokeWidth={2.2} />
+        <ellipse cx={33} cy={54} rx={26} ry={9} transform="rotate(-14 33 54)" fill="#eef8ff" fillOpacity={0.85} stroke="#9fbccc" strokeWidth={1.2} />
+        <S d="M54 52 C44 50 30 50 12 58" stroke="#b9d2de" strokeWidth={0.9} />
+      </Mirror>
+      <ellipse cx={60} cy={79} rx={12} ry={20} fill="#2b2a24" />
+      <Mirror>
+        <ellipse cx={53} cy={69} rx={5} ry={2.6} transform="rotate(-20 53 69)" fill="#f5c331" />
+        <ellipse cx={52.5} cy={79} rx={5} ry={2.6} transform="rotate(-20 52.5 79)" fill="#f5c331" />
+        <ellipse cx={54} cy={89} rx={4} ry={2.2} transform="rotate(-20 54 89)" fill="#f5c331" />
+      </Mirror>
+      <ellipse cx={60} cy={51} rx={10} ry={10} fill="#5b5a2e" />
+      <S d="M57 44 L57 58 M63 44 L63 58" stroke="#7a7a45" strokeWidth={1.4} />
+      <ellipse cx={60} cy={35} rx={15} ry={10} fill="#8a3a22" />
+      <circle cx={52} cy={33} r={8.5} fill="#b5482e" />
+      <circle cx={68} cy={33} r={8.5} fill="#b5482e" />
+      <Eye x={52} y={33} r={5} />
+      <Eye x={68} y={33} r={5} />
+      <S d="M58 25 L56 21 M62 25 L64 21" stroke={leg} strokeWidth={1.4} />
+    </g>
+  );
+}
+
+/** 노린재: 방패 모양 몸, 등에 세모난 작은방패판 */
+function StinkBug() {
+  const leg = '#4a3b2a';
+  return (
+    <g>
+      <Mirror>
+        <S d="M47 52 L35 46 L31 39" stroke={leg} strokeWidth={2.6} />
+        <S d="M45 65 L32 67 L27 73" stroke={leg} strokeWidth={2.6} />
+        <S d="M48 78 L37 89 L35 99" stroke={leg} strokeWidth={2.6} />
+        <S d="M55 31 L47 22 L41 12" stroke={leg} strokeWidth={2} />
+        <circle cx={47} cy={22} r={1.6} fill={leg} />
+        <circle cx={41} cy={12} r={1.8} fill={leg} />
+      </Mirror>
+      <path d="M60 38 L84 50 Q86 60 80 72 L70 97 Q60 104 50 97 L40 72 Q34 60 36 50 Z" fill="#8a6b3f" />
+      <path d="M38 50 L60 38 L82 50 L80 58 L40 58 Z" fill="#7a5c34" />
+      <path d="M47 58 L73 58 L60 85 Z" fill="#a1804e" />
+      <path d="M50 93 Q60 101 70 93 L66 88 L54 88 Z" fill="#5a4630" />
+      {[[45, 66], [75, 66], [52, 80], [68, 80], [60, 64]].map(([x, y]) => (
+        <circle key={`${x}-${y}`} cx={x} cy={y} r={1.3} fill="#5e4628" />
+      ))}
+      <path d="M53 30 Q60 27 67 30 L68 40 L52 40 Z" fill="#7a5c34" />
+      <Eye x={53.5} y={35} r={3.2} />
+      <Eye x={66.5} y={35} r={3.2} />
+    </g>
+  );
+}
+
+/** 하늘소(알락하늘소 모습): 몸보다 긴 줄무늬 더듬이, 검은 몸에 흰 점 */
+function LonghornBeetle() {
+  const black = '#1d2230';
+  return (
+    <g>
+      <Mirror>
+        <S d="M55 30 C40 17 22 19 14 40 C8 57 10 81 16 106" stroke={black} strokeWidth={2.8} />
+        <S d="M55 30 C40 17 22 19 14 40 C8 57 10 81 16 106" stroke="#c9dcff" strokeWidth={2.8} strokeDasharray="5 6" strokeLinecap="butt" />
+        <S d="M49 50 L36 44 L30 35" stroke={black} strokeWidth={2.6} />
+        <S d="M48 63 L32 65 L26 71" stroke={black} strokeWidth={2.6} />
+        <S d="M49 77 L36 89 L33 99" stroke={black} strokeWidth={2.6} />
+        <S d="M49 48 L44 46" stroke={black} strokeWidth={2.4} />
+      </Mirror>
+      <path d="M46 55 Q45 104 60 106 Q75 104 74 55 Z" fill={black} />
+      <S d="M60 55 L60 106" stroke="#0e121a" strokeWidth={1.2} />
+      {[[52, 62, 2.6], [67, 64, 2.4], [54, 74, 3], [66, 78, 2.6], [52, 88, 2.4], [68, 90, 2.8], [58, 98, 2], [62, 70, 1.8], [56, 84, 1.6]].map(([x, y, r]) => (
+        <circle key={`${x}-${y}`} cx={x} cy={y} r={r} fill="#f4f7ff" />
+      ))}
+      <ellipse cx={60} cy={48} rx={11} ry={8} fill={black} />
+      <ellipse cx={60} cy={35} rx={9} ry={8} fill={black} />
+      <Eye x={55} y={34} r={3} />
+      <Eye x={65} y={34} r={3} />
+      <ellipse cx={55} cy={60} rx={2.5} ry={6} fill="#4a5470" opacity={0.6} />
+    </g>
+  );
+}
+
+/** 땅강아지: 삽 같은 앞다리, 보송한 갈색 몸, 꼬리털 두 가닥 */
+function MoleCricket() {
+  const leg = '#6b4228';
+  return (
+    <g>
+      <Mirror>
+        <S d="M48 38 L36 31" stroke={leg} strokeWidth={4} />
+        <path d="M37 22 L26 24 L21 32 L30 37 L39 32 Z" fill={leg} />
+        <S d="M24 26 L19 23 M22 30 L17 30 M24 34 L20 37" stroke={leg} strokeWidth={1.6} />
+        <S d="M49 54 L38 58 L33 64" stroke={leg} strokeWidth={3} />
+        <S d="M50 64 L40 74 L36 84" stroke={leg} strokeWidth={3} />
+        <S d="M56 20 L50 11" stroke={leg} strokeWidth={1.6} />
+      </Mirror>
+      <S d="M56 97 L52 109 M64 97 L68 109" stroke={leg} strokeWidth={1.8} />
+      <ellipse cx={60} cy={78} rx={12} ry={20} fill="#9a6a40" />
+      <S d="M50 82 L70 82 M51 89 L69 89 M53 95 L67 95" stroke="#7d5230" strokeWidth={1.2} />
+      <path d="M50 55 L70 55 L68 76 L52 76 Z" fill="#b08254" />
+      <S d="M60 56 L60 76 M54 60 L56 74 M66 60 L64 74" stroke="#8a6038" strokeWidth={1} />
+      <ellipse cx={60} cy={42} rx={14} ry={13} fill="#7a4c2a" />
+      <ellipse cx={60} cy={42} rx={12} ry={11} fill="none" stroke="#9a6a40" strokeWidth={1.5} strokeDasharray="1.5 2" />
+      <ellipse cx={60} cy={26} rx={8} ry={7} fill="#6b4228" />
+      <Eye x={56} y={25} r={2.6} />
+      <Eye x={64} y={25} r={2.6} />
+    </g>
+  );
+}
+
+/** 소금쟁이: 가는 몸, 짧은 앞다리 + 아주 긴 가운뎃다리·뒷다리 (모두 6개) */
+function WaterStrider() {
+  const leg = '#333';
+  return (
+    <g>
+      <Mirror>
+        <ellipse cx={8} cy={30} rx={7} ry={2.6} fill="none" stroke="#8fd0f5" strokeWidth={1.5} />
+        <ellipse cx={15} cy={104} rx={7} ry={2.6} fill="none" stroke="#8fd0f5" strokeWidth={1.5} />
+        <S d="M56 40 L48 34 L46 27" stroke={leg} strokeWidth={2} />
+        <S d="M55 50 L30 47 L8 30" stroke={leg} strokeWidth={1.8} />
+        <S d="M56 62 L35 77 L15 104" stroke={leg} strokeWidth={1.8} />
+        <S d="M58 26 L54 14" stroke={leg} strokeWidth={1.3} />
+      </Mirror>
+      <ellipse cx={60} cy={61} rx={5} ry={27} fill="#3d3d3d" />
+      <ellipse cx={58.5} cy={55} rx={1.6} ry={14} fill="#6b6b6b" />
+      <circle cx={60} cy={31} r={5.5} fill="#3d3d3d" />
+      <Eye x={57} y={30} r={2.4} />
+      <Eye x={63} y={30} r={2.4} />
+    </g>
+  );
+}
+
+/** 물방개: 매끈한 타원형 몸에 노란 테두리, 털 달린 넓적한 뒷다리 */
+function DivingBeetle() {
+  const leg = '#4a5530';
+  return (
+    <g>
+      <Mirror>
+        <S d="M43 46 L34 42 L30 36" stroke={leg} strokeWidth={2.2} />
+        <S d="M40 58 L28 60 L24 66" stroke={leg} strokeWidth={2.4} />
+        <S d="M42 76 L26 87 L14 101" stroke={leg} strokeWidth={5} />
+        <S d="M24 89 L20 85 M20 93 L16 89 M17 97 L13 93 M27 91 L25 95 M22 96 L20 100" stroke="#8a9a5a" strokeWidth={1.2} />
+        <S d="M54 29 Q46 20 40 22" stroke={leg} strokeWidth={1.4} />
+      </Mirror>
+      <ellipse cx={60} cy={65} rx={22} ry={32} fill="#2f3a26" stroke="#e0c040" strokeWidth={3} />
+      <S d="M60 46 L60 96" stroke="#1d2418" strokeWidth={1.2} />
+      <S d="M40 47 Q60 41 80 47" stroke="#1d2418" strokeWidth={1.2} />
+      <ellipse cx={51} cy={62} rx={4} ry={12} fill="#5c6e45" opacity={0.6} />
+      <path d="M48 38 Q60 26 72 38 Z" fill="#2f3a26" stroke="#e0c040" strokeWidth={2} />
+      <Eye x={54} y={34} r={2.8} />
+      <Eye x={66} y={34} r={2.8} />
+      <circle cx={60} cy={104} r={3} fill="none" stroke="#9fd3f0" strokeWidth={1.4} />
+    </g>
+  );
+}
+
+/** 거미(무당거미 모습): 몸이 두 부분, 다리 8개, 눈 8개 — 곤충이 아니에요 */
+function Spider() {
+  const leg = '#3b2a1a';
+  return (
+    <g>
+      <g stroke="#dfe8ee" strokeWidth={0.9} fill="none">
+        <path d="M60 4 L60 116 M4 60 L116 60 M18 18 L102 102 M102 18 L18 102" />
+        <circle cx={60} cy={60} r={20} />
+        <circle cx={60} cy={60} r={36} />
+        <circle cx={60} cy={60} r={52} />
+      </g>
+      <Mirror>
+        <S d="M53 40 L39 27 L32 10" stroke={leg} strokeWidth={2.4} />
+        <S d="M52 44 L33 37 L18 30" stroke={leg} strokeWidth={2.4} />
+        <S d="M52 49 L33 54 L18 62" stroke={leg} strokeWidth={2.4} />
+        <S d="M53 53 L39 66 L31 84" stroke={leg} strokeWidth={2.4} />
+        <S d="M57 37 L55 31" stroke={leg} strokeWidth={1.8} />
+      </Mirror>
+      <ellipse cx={60} cy={76} rx={15} ry={20} fill="#f2c12e" />
+      <S d="M47 68 Q60 64 73 68 M46 78 Q60 74 74 78 M48 88 Q60 84 72 88" stroke="#2b2b2b" strokeWidth={3} />
+      <ellipse cx={60} cy={94} rx={4} ry={2.5} fill="#e2563a" />
+      <ellipse cx={60} cy={46} rx={10} ry={11} fill="#4a3522" />
+      <Eye x={56} y={44} r={3.3} />
+      <Eye x={64} y={44} r={3.3} />
+      {[[52.5, 40], [67.5, 40], [56.5, 38], [63.5, 38], [53, 48.5], [67, 48.5]].map(([x, y]) => (
+        <circle key={`${x}-${y}`} cx={x} cy={y} r={1.2} fill="#1f1f1f" />
+      ))}
+    </g>
+  );
+}
+
+/** 민달팽이: 달팽이와 닮았지만 껍데기가 없어요 */
+function Slug() {
+  return (
+    <g>
+      <path d="M10 88 Q14 76 30 74 Q60 70 86 66 Q100 64 104 74 Q106 84 96 88 Q60 94 10 88 Z" fill="#b9a58c" />
+      <ellipse cx={72} cy={71} rx={18} ry={7} fill="#a38f74" />
+      <circle cx={78} cy={73} r={1.6} fill="#7d6a52" />
+      <S d="M18 84 Q50 79 62 76" stroke="#a8947a" strokeWidth={1.4} />
+      <S d="M24 89 Q60 92 94 87" stroke="#fff" strokeOpacity={0.55} strokeWidth={2} />
+      <S d="M94 67 L100 46" stroke="#a8947a" strokeWidth={3.2} />
+      <S d="M89 68 L89 48" stroke="#a8947a" strokeWidth={3.2} />
+      <circle cx={100} cy={45} r={3.6} fill="#3a2e24" />
+      <circle cx={89} cy={47} r={3.6} fill="#3a2e24" />
+      <circle cx={101} cy={44} r={1.1} fill="#fff" />
+      <circle cx={90} cy={46} r={1.1} fill="#fff" />
+      <S d="M101 76 L108 73 M100 79 L107 80" stroke="#a8947a" strokeWidth={2.2} />
+      <S d="M92 78 Q96 81 100 78" stroke="#6d5a44" strokeWidth={1.5} />
+      <Blush x={90} y={81} r={2.6} />
+    </g>
+  );
+}
+
+/** 참새: 밤색 머리, 흰 뺨에 검은 점, 검은 턱, 짧은 원뿔 부리 */
+function Sparrow() {
+  return (
+    <g>
+      <path d="M24 66 L6 78 L10 83 L30 72 Z" fill="#6b4a2e" />
+      <S d="M50 84 L48 98 M58 84 L60 98 M44 98 L52 98 M56 98 L64 98" stroke="#b07a4a" strokeWidth={2.2} />
+      <ellipse cx={52} cy={66} rx={28} ry={20} fill="#cbb08a" />
+      <ellipse cx={58} cy={75} rx={19} ry={10} fill="#ebe1cf" />
+      <path d="M28 56 Q50 44 74 56 Q66 74 44 78 Q28 74 28 56 Z" fill="#8a5a34" />
+      <S d="M36 58 L46 64 M46 54 L56 62 M56 54 L64 60" stroke="#4e3220" strokeWidth={2} />
+      <S d="M38 68 L62 63" stroke="#f3eadb" strokeWidth={2.2} />
+      <circle cx={80} cy={48} r={15} fill="#f3eadb" />
+      <path d="M65 45 Q71 31 87 33 Q96 37 95 44 Q82 40 66 47 Z" fill="#8a4a2a" />
+      <path d="M77 59 Q84 63 91 56 L89 52 Q84 56 79 54 Z" fill="#2b2b2b" />
+      <ellipse cx={77} cy={50} rx={3} ry={2.5} fill="#2b2b2b" />
+      <Eye x={86} y={44} r={3.4} />
+      <path d="M94 46 L104 49 L94 52 Z" fill="#3a3a3a" />
+    </g>
+  );
+}
+
+/** 까치: 검은색·흰색 깃털, 푸른빛 도는 긴 꼬리 */
+function Magpie() {
+  return (
+    <g>
+      <path d="M40 66 L4 88 L9 95 L46 74 Z" fill="#1f2a33" />
+      <S d="M38 70 L10 88" stroke="#2f7f78" strokeWidth={2.4} />
+      <S d="M54 76 L52 93 M62 76 L64 93 M48 93 L56 93 M60 93 L68 93" stroke="#222" strokeWidth={2.2} />
+      <ellipse cx={57} cy={62} rx={23} ry={16} fill="#1f2a33" />
+      <path d="M44 66 Q56 84 75 67 Q71 77 57 79 Q46 77 44 66 Z" fill="#fff" />
+      <path d="M36 56 Q54 45 73 54 Q60 63 40 64 Z" fill="#24425a" />
+      <ellipse cx={55} cy={58} rx={11} ry={5} fill="#fff" />
+      <circle cx={80} cy={45} r={12} fill="#1f2a33" />
+      <Eye x={83} y={42} r={3.2} />
+      <path d="M90 44 L105 47.5 L90 51 Z" fill="#1a1a1a" />
+    </g>
+  );
+}
+
 const ART: Record<string, ComponentType> = {
   ant: Ant,
   ladybug: Ladybug,
@@ -568,6 +819,16 @@ const ART: Record<string, ComponentType> = {
   'tree-frog': TreeFrog,
   tadpole: Tadpole,
   medaka: Medaka,
+  hoverfly: Hoverfly,
+  'stink-bug': StinkBug,
+  'longhorn-beetle': LonghornBeetle,
+  'mole-cricket': MoleCricket,
+  'water-strider': WaterStrider,
+  'diving-beetle': DivingBeetle,
+  spider: Spider,
+  slug: Slug,
+  sparrow: Sparrow,
+  magpie: Magpie,
 };
 
 export function hasArt(id: string): boolean {

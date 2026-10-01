@@ -25,6 +25,8 @@ import { usePrefersReducedMotion } from '../hooks.ts';
 import { CHALLENGE_INFO, GRADE_TEXT, isActionKey, type Grade } from '../game/challenges.ts';
 import { Challenge } from './Challenge.tsx';
 import { MissionList, RankCard } from './ProgressBits.tsx';
+import { GameCard } from './GameCard.tsx';
+import { BIG_REVEAL_FROM, CARD_GRADES, cardTitle, type Card } from '../game/cards.ts';
 
 interface Props {
   habitat: HabitatId;
@@ -66,6 +68,8 @@ export function ExploreScreen({ habitat, onHabitat, save, onRecord, onToggleSoun
   const [enc, setEnc] = useState<Encounter | null>(null);
   const [toast, setToast] = useState<ResultToast | null>(null);
   const [cheer, setCheer] = useState(CHEERS[0]);
+  const [bigCard, setBigCard] = useState<{ key: number; card: Card } | null>(null);
+  const bigTimer = useRef<number | undefined>(undefined);
 
   // 빠르게 여러 번 눌러도 한 번만 처리되도록, 화면 갱신을 기다리지 않는 잠금 값
   const phaseRef = useRef<Phase>('idle');
@@ -93,9 +97,11 @@ export function ExploreScreen({ habitat, onHabitat, save, onRecord, onToggleSoun
     if (h === habitat) return;
     clearTimers();
     window.clearTimeout(toastTimer.current);
+    window.clearTimeout(bigTimer.current);
     encRef.current = null;
     setEnc(null);
     setToast(null);
+    setBigCard(null);
     go('idle');
     setLayout(makeLayout(h));
     onHabitat(h);
@@ -105,6 +111,7 @@ export function ExploreScreen({ habitat, onHabitat, save, onRecord, onToggleSoun
     () => () => {
       clearTimers();
       window.clearTimeout(toastTimer.current);
+      window.clearTimeout(bigTimer.current);
     },
     [],
   );
@@ -153,9 +160,11 @@ export function ExploreScreen({ habitat, onHabitat, save, onRecord, onToggleSoun
     const next: Encounter = { key: seq.current, spotKey: spot.key, creature, shiny, ...creaturePosition(spot, creature) };
     encRef.current = next;
     setEnc(next);
-    // 앞의 결과 안내가 미니게임을 가리지 않도록 바로 닫기
+    // 앞의 결과 안내·카드가 미니게임을 가리지 않도록 바로 닫기
     window.clearTimeout(toastTimer.current);
+    window.clearTimeout(bigTimer.current);
     setToast(null);
+    setBigCard(null);
     go('appear');
     sfx.search();
     if (shiny) sfx.appearShiny();
@@ -184,6 +193,15 @@ export function ExploreScreen({ habitat, onHabitat, save, onRecord, onToggleSoun
       if (ev.isNew) sfx.newFind();
       else sfx.again();
     });
+    later(t.caught + 350, () => sfx.card(ev.card.g));
+    // 영웅 이상 카드는 화면 가운데에서 크게 보여 줘요
+    if (ev.card.g >= BIG_REVEAL_FROM) {
+      later(t.caught + 300, () => {
+        setBigCard({ key: current.key, card: ev.card });
+        window.clearTimeout(bigTimer.current);
+        bigTimer.current = window.setTimeout(() => setBigCard(null), reduced ? 3000 : 3800);
+      });
+    }
     if (ev.missionsCompleted.length || ev.newBadges.length) later(t.caught + 600, () => sfx.reward());
     if (ev.rankUp) later(t.caught + 1100, () => sfx.rankUp());
     later(t.release, () => go('release'));
@@ -336,6 +354,25 @@ export function ExploreScreen({ habitat, onHabitat, save, onRecord, onToggleSoun
         )}
 
         {toast && <ResultCard key={`toast-${toast.key}`} toast={toast} />}
+        {bigCard && (
+          <div
+            key={`reveal-${bigCard.key}`}
+            className={`card-reveal cr-g${bigCard.card.g}`}
+            role="dialog"
+            aria-label={`${CARD_GRADES[bigCard.card.g].name} 카드를 받았어요`}
+            onClick={() => {
+              window.clearTimeout(bigTimer.current);
+              setBigCard(null);
+            }}
+          >
+            <div className="card-rays" aria-hidden="true" />
+            <p className="card-reveal-title">
+              {'★'.repeat(CARD_GRADES[bigCard.card.g].stars)} {CARD_GRADES[bigCard.card.g].name} 카드 획득!
+            </p>
+            <GameCard card={bigCard.card} size="lg" reveal />
+            <p className="card-reveal-tip">눌러서 계속하기 · 카드첩에 모았어요</p>
+          </div>
+        )}
         {toast?.events.rankUp && (
           <div key={`party-${toast.key}`} className="confetti scene-confetti" aria-hidden="true">
             {Array.from({ length: 18 }, (_, i) => (
@@ -369,8 +406,8 @@ function ResultCard({ toast }: { toast: ResultToast }) {
       role="status"
     >
       <div className="result-main">
-        <div className="result-art">
-          <CreatureArt id={creature.id} />
+        <div className="result-card">
+          <GameCard card={ev.card} size="sm" reveal />
         </div>
         <div className="result-text">
           {ev.shiny && <p className="result-shiny">✨ 반짝반짝 생물!</p>}
@@ -385,6 +422,9 @@ function ResultCard({ toast }: { toast: ResultToast }) {
           <p className="result-name">{creature.name}</p>
           <p className="result-sub">
             {ev.isNew ? '도감에 새로 기록했어요' : `발견 ${ev.count}번째 · 도감에 기록했어요`}
+          </p>
+          <p className={`result-cardline gl-${ev.card.g}`}>
+            🃏 {CARD_GRADES[ev.card.g].name} 카드 · {cardTitle(ev.card, creature.name)}
           </p>
         </div>
         <p className="result-stars" aria-label={`별 ${ev.starsGained}개`}>

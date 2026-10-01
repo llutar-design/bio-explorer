@@ -1,15 +1,18 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
+﻿import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { TOTAL, getCreature, type HabitatId } from './data/creatures.ts';
 import { emptySave, isStorageAvailable, loadSave, writeSave, type SaveData } from './game/storage.ts';
-import { applyFind, type FindEvents } from './game/progress.ts';
+import { applyFind, applyQuiz, withPlayDay, type FindEvents } from './game/progress.ts';
+import { QUIZ_STAR } from './game/quiz.ts';
+import { QuizScreen } from './components/QuizScreen.tsx';
 import type { Grade } from './game/challenges.ts';
 import { setSoundEnabled, sfx } from './game/sound.ts';
 import { HomeScreen } from './components/HomeScreen.tsx';
 import { ExploreScreen } from './components/ExploreScreen.tsx';
 import { DexScreen } from './components/DexScreen.tsx';
+import { CardsScreen } from './components/CardsScreen.tsx';
 
 // 화면: 홈(장소 고르기 + 찾은 생물 정원) → 탐험 → 도감
-type Screen = 'home' | 'explore' | 'dex';
+type Screen = 'home' | 'explore' | 'dex' | 'cards' | 'quiz';
 
 export default function App() {
   const [storageOk, setStorageOk] = useState(isStorageAvailable);
@@ -66,6 +69,19 @@ export default function App() {
     setScreen('explore');
   };
 
+  // 퀴즈 한 판이 끝나면 맞힌 문제마다 별
+  const finishQuiz = (correct: number) => {
+    const r = applyQuiz(saveRef.current, correct, QUIZ_STAR);
+    commit(r.next);
+    return { starsGained: r.starsGained, newBadges: r.newBadges, rankUp: r.rankUp };
+  };
+
+  // 오늘 탐험한 날로 기록 (연속 탐험일)
+  useEffect(() => {
+    const next = withPlayDay(saveRef.current);
+    if (next !== saveRef.current) commit(next);
+  }, [commit]);
+
   const openDex = (from: 'home' | 'explore') => {
     setDexFrom(from);
     setScreen('dex');
@@ -91,6 +107,9 @@ export default function App() {
           storageOk={storageOk}
           onGo={goExplore}
           onOpenDex={() => openDex('home')}
+          onOpenCards={() => setScreen('cards')}
+          onOpenQuiz={() => setScreen('quiz')}
+          lastHabitat={habitat}
           onToggleSound={toggleSound}
         />
       )}
@@ -127,6 +146,19 @@ export default function App() {
         />
       )}
 
+      {screen === 'cards' && <CardsScreen cards={save.cards} backLabel="홈으로 돌아가기" onBack={() => setScreen('home')} />}
+
+      {screen === 'quiz' && <QuizScreen counts={save.counts} onBack={() => setScreen('home')} onFinish={finishQuiz} />}
+
+      {/* 푸터 — 탐험 화면은 게임 화면을 꽉 채우므로 빼요 */}
+      {screen !== 'explore' && (
+        <footer className="site-footer">
+          <span>초록 생물 도감</span>
+          <span aria-hidden="true">·</span>
+          <span className="site-footer-credit">© KIM</span>
+        </footer>
+      )}
+
       {celebrating && (
         <div className="overlay celebrate-overlay">
           <div className="confetti" aria-hidden="true">
@@ -159,3 +191,4 @@ export default function App() {
     </div>
   );
 }
+

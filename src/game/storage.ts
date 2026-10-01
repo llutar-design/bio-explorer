@@ -1,5 +1,6 @@
 import { CREATURES } from '../data/creatures.ts';
 import { BADGES, STAR_AGAIN, STAR_NEW, refreshMissions, type GameState, type Mission } from './progress.ts';
+import { isValidCard, type Card } from './cards.ts';
 
 // 기록은 이 브라우저의 localStorage 에만 저장합니다. (서버·개인정보 없음)
 const KEY = 'uri-ban-bio-explorer:v1';
@@ -20,6 +21,9 @@ export const emptySave = (sound = true): SaveData => {
     totalFinds: 0,
     missionsDone: 0,
     perfects: 0,
+    cards: [],
+    quizCorrect: 0,
+    playDays: [],
     missions: [],
     badges: [],
     sound,
@@ -92,6 +96,11 @@ export function loadSave(): SaveData {
       totalFinds: Math.max(finds, num(p.totalFinds, 0)),
       missionsDone: num(p.missionsDone, 0),
       perfects: num(p.perfects, 0),
+      cards: Array.isArray(p.cards) ? p.cards.filter((c): c is Card => isValidCard(c) && ids.has(c.c)) : [],
+      quizCorrect: num(p.quizCorrect, 0),
+      playDays: Array.isArray(p.playDays)
+        ? p.playDays.filter((d): d is string => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)).slice(-60)
+        : [],
       missions: cleanMissions(p.missions),
       badges: Array.isArray(p.badges) ? p.badges.filter((b): b is string => typeof b === 'string') : [],
       sound: p.sound !== false,

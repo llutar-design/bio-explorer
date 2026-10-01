@@ -27,6 +27,8 @@ import {
   swimState,
   type Grade,
 } from '../src/game/challenges.ts';
+import { CARD_GRADES, drawCard, isValidCard } from '../src/game/cards.ts';
+import { QUIZ_LENGTH, makeQuiz } from '../src/game/quiz.ts';
 
 let ok = true;
 const fail = (msg: string) => {
@@ -37,7 +39,12 @@ const fail = (msg: string) => {
 console.log(`수집할 생물: ${TOTAL}가지`);
 if (new Set(CREATURES.map((c) => c.id)).size !== TOTAL) fail('id 중복');
 
-const others = ['달팽이', '공벌레', '지렁이', '청개구리', '올챙이', '송사리'];
+// 곤충이 아닌 동물 (거미는 다리 8개 거미류, 새는 조류)
+const others = ['달팽이', '공벌레', '지렁이', '청개구리', '올챙이', '송사리', '거미', '민달팽이', '참새', '까치'];
+const birds = ['참새', '까치'];
+const water = ['올챙이', '송사리', '소금쟁이', '물방개'];
+// 같은 화면에 그림 없는 생물이 없는지 (그림 파일과 데이터 연결)
+const artSrc = (await import('node:fs')).readFileSync(new URL('../src/art/CreatureArt.tsx', import.meta.url), 'utf8');
 for (const c of CREATURES) {
   if (others.includes(c.name) && c.group !== 'other') fail(`${c.name}은(는) 곤충이 아님`);
   if (!others.includes(c.name) && c.group !== 'insect') fail(`${c.name}은(는) 곤충이어야 함`);
@@ -51,8 +58,9 @@ for (const c of CREATURES) {
     const layout = makeLayout(c.habitat);
     if (!layout.some((s) => c.spots.includes(s.kind))) { fail(`${c.name}: 배치에서 빠짐`); break; }
   }
-  const tool = c.group === 'insect' ? 'net' : c.name === '올챙이' || c.name === '송사리' ? 'scoop' : 'loupe';
+  const tool = water.includes(c.name) ? 'scoop' : birds.includes(c.name) ? 'binoculars' : c.group === 'insect' ? 'net' : 'loupe';
   if (c.tool !== tool) fail(`${c.name}: 도구가 ${tool} 이어야 함`);
+  if (!new RegExp(`['\\s]${c.id.includes('-') ? `'${c.id}'` : c.id}:`).test(artSrc)) fail(`${c.name}: 그림이 연결되지 않음`);
 }
 console.log(`곤충 ${CREATURES.filter((c) => c.group === 'insect').length}가지, 다른 동물 ${CREATURES.filter((c) => c.group === 'other').length}가지`);
 for (const h of HABITATS) {
@@ -81,7 +89,7 @@ console.log(`무작위로 눌렀을 때 모두 모으기까지 발견 횟수: �
 
 // 재미 요소 점검: 별·등급·미션·배지가 모두 얻을 수 있는지 (무작위 놀이 흉내)
 {
-  const base: GameState = { counts: {}, shiny: {}, celebrated: false, stars: 0, totalFinds: 0, missionsDone: 0, perfects: 0, missions: [], badges: [] };
+  const base: GameState = { counts: {}, shiny: {}, celebrated: false, stars: 0, totalFinds: 0, missionsDone: 0, perfects: 0, cards: [], quizCorrect: 0, playDays: [], missions: [], badges: [] };
   let s: GameState = { ...base, missions: refreshMissions(base) };
   let celebrations = 0;
   let findsToComplete = 0;
@@ -138,6 +146,51 @@ console.log(`무작위로 눌렀을 때 모두 모으기까지 발견 횟수: �
   if (holes.size !== 3) fail('숨바꼭질: 세 곳에서 모두 나오지 않음');
   console.log(`미니게임 ${kinds.size}종류 · 성공할 수 있는 시간 비율`);
   report.forEach((l) => console.log('  ' + l));
+}
+
+// 카드 점검: 등급별로 실제로 나오는 비율, 수식어, 반짝 보장
+{
+  const N = 100000;
+  const pct = (opts: { grade: Grade; shiny: boolean }) => {
+    const n = CARD_GRADES.map(() => 0);
+    for (let i = 0; i < N; i++) n[drawCard('ant', opts).g]++;
+    return n.map((v) => ((v / N) * 100).toFixed(1) + '%');
+  };
+  const normal = pct({ grade: 'good', shiny: false });
+  const perfect = pct({ grade: 'perfect', shiny: false });
+  const shiny = pct({ grade: 'ok', shiny: true });
+  console.log('카드 등급별 확률 (' + CARD_GRADES.map((g) => g.name).join(' / ') + ')');
+  console.log('  보통: ' + normal.join(' / '));
+  console.log('  “완벽해요!”: ' + perfect.join(' / '));
+  console.log('  반짝 생물: ' + shiny.join(' / '));
+  if (parseFloat(shiny[0]) + parseFloat(shiny[1]) > 0) fail('반짝 생물인데 영웅 미만 카드가 나옴');
+  for (const g of CARD_GRADES) if (g.modifiers.length === 0) fail(`${g.name}: 수식어 없음`);
+  for (let i = 0; i < 2000; i++) {
+    const c = drawCard('snail', { grade: 'ok', shiny: false });
+    if (!isValidCard(c)) fail('잘못된 카드: ' + JSON.stringify(c));
+  }
+}
+
+// 생태 퀴즈 점검
+{
+  const kinds = { fact: 0, insect: 0, place: 0 };
+  for (let i = 0; i < 500; i++) {
+    const counts: Record<string, number> = {};
+    CREATURES.forEach((c) => { if (Math.random() < 0.5) counts[c.id] = 1; });
+    const qs = makeQuiz(counts);
+    if (qs.length !== QUIZ_LENGTH) fail('퀴즈 문제 수가 이상함');
+    if (new Set(qs.map((q) => q.creature.id)).size !== qs.length) fail('한 판에 같은 생물이 두 번 나옴');
+    for (const q of qs) {
+      kinds[q.kind]++;
+      if (!q.choices.some((c) => c.key === q.answer)) fail(`정답이 보기에 없음: ${q.prompt}`);
+      if (new Set(q.choices.map((c) => c.key)).size !== q.choices.length) fail('보기가 겹침');
+      if (q.kind === 'fact' && q.clue!.includes(q.creature.name)) fail(`설명에 정답 이름이 보임: ${q.creature.name}`);
+      if (!q.explain || q.explain.includes('undefined')) fail('설명이 비었음');
+    }
+  }
+  const sample = makeQuiz({});
+  console.log(`생태 퀴즈: 문제 종류 ${JSON.stringify(kinds)} · 예) ${sample.map((q) => q.prompt).slice(0, 2).join(' / ')}`);
+  console.log('  설명 예) ' + sample.map((q) => q.explain).slice(0, 2).join(' | '));
 }
 
 console.log(ok ? '✓ 데이터 점검 통과' : '✗ 데이터 점검 실패');

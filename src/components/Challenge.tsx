@@ -376,7 +376,15 @@ function SneakGame({ creature, x, y, reduced, onSuccess }: ChallengeProps) {
 }
 
 // ─────────────────────────── 숨바꼭질 (두더지 잡기) ───────────────────────────
-const COVER: Record<string, SpotKind> = { ant: 'ground', earthworm: 'soil', snail: 'wetLeaf', 'pill-bug': 'fallenLeaves' };
+const COVER: Record<string, SpotKind> = {
+  ant: 'ground',
+  earthworm: 'soil',
+  snail: 'wetLeaf',
+  'pill-bug': 'fallenLeaves',
+  'longhorn-beetle': 'trunk',
+  'mole-cricket': 'soil',
+  slug: 'wetLeaf',
+};
 
 function HideGame({ creature, x, y, reduced, onSuccess }: ChallengeProps) {
   const clock = useClock(reduced ? 0.75 : 1);

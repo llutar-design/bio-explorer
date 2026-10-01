@@ -208,6 +208,22 @@ export function SpotArt({ kind, variant }: { kind: SpotKind; variant: number }) 
 }
 
 export function ToolArt({ tool }: { tool: Tool }) {
+  if (tool === 'binoculars') {
+    // 쌍안경: 새는 멀리서 관찰해요
+    return (
+      <svg viewBox="0 0 120 120" aria-hidden="true" focusable="false">
+        <path d="M40 70 Q60 60 80 70" stroke="#5a4636" strokeWidth={6} fill="none" strokeLinecap="round" />
+        <rect x={20} y={36} width={34} height={46} rx={10} fill="#4b6584" />
+        <rect x={66} y={36} width={34} height={46} rx={10} fill="#4b6584" />
+        <rect x={50} y={44} width={20} height={20} rx={5} fill="#3c5270" />
+        <circle cx={37} cy={86} r={17} fill="#dff4ff" stroke="#2f405a" strokeWidth={6} />
+        <circle cx={83} cy={86} r={17} fill="#dff4ff" stroke="#2f405a" strokeWidth={6} />
+        <path d="M28 80 Q32 74 39 73 M74 80 Q78 74 85 73" stroke="#fff" strokeWidth={4} strokeLinecap="round" fill="none" />
+        <rect x={26} y={28} width={22} height={10} rx={4} fill="#2f405a" />
+        <rect x={72} y={28} width={22} height={10} rx={4} fill="#2f405a" />
+      </svg>
+    );
+  }
   if (tool === 'net') {
     return (
       <svg viewBox="0 0 120 120" aria-hidden="true" focusable="false">

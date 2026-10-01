@@ -14,6 +14,7 @@ import {
 } from '../data/creatures.ts';
 import type { Rand } from './logic.ts';
 import { GRADE_BONUS, type Grade } from './challenges.ts';
+import { drawCard, type Card } from './cards.ts';
 
 // ── 별 ──
 export const STAR_NEW = 3; // 새로운 생물 발견
@@ -69,6 +70,12 @@ export interface GameState {
   missionsDone: number;
   /** 미니게임에서 “완벽해요!”를 받은 횟수 */
   perfects: number;
+  /** 받은 카드 (받은 순서대로) */
+  cards: Card[];
+  /** 생태 퀴즈에서 맞힌 문제 수 */
+  quizCorrect: number;
+  /** 게임을 한 날짜들 (YYYY-MM-DD, 최근 60일까지) — 연속 탐험일 계산용 */
+  playDays: string[];
   missions: Mission[];
   badges: string[];
 }
@@ -101,15 +108,59 @@ export const BADGES: Badge[] = [
   { id: 'mission-30', name: '미션 달인', icon: '🏆', desc: '미션 30개 성공하기', earned: (s) => s.missionsDone >= 30 },
   { id: 'finds-100', name: '부지런한 탐험가', icon: '👣', desc: '생물 100번 발견하기', earned: (s) => s.totalFinds >= 100 },
   { id: 'perfect-10', name: '타이밍 달인', icon: '🎖️', desc: '“완벽해요!” 10번 받기', earned: (s) => s.perfects >= 10 },
+  { id: 'card-hero', name: '영웅 카드 수집가', icon: '🃏', desc: '영웅 등급 이상 카드 받기', earned: (s) => s.cards.some((c) => c.g >= 2) },
+  { id: 'card-legend', name: '전설의 카드', icon: '👑', desc: '전설 등급 이상 카드 받기', earned: (s) => s.cards.some((c) => c.g >= 3) },
+  { id: 'quiz-10', name: '퀴즈 척척박사', icon: '💡', desc: '생태 퀴즈 10문제 맞히기', earned: (s) => s.quizCorrect >= 10 },
+  { id: 'streak-3', name: '꾸준한 탐험가', icon: '📅', desc: '3일 연속 탐험하기', earned: (s) => streakDays(s.playDays) >= 3 },
   { id: 'dex-complete', name: '도감 완성', icon: '📖', desc: `${TOTAL}가지 모두 찾기`, earned: (s) => countDiscovered(s.counts) === TOTAL },
 ];
+
+// ── 연속 탐험일 ──
+export function dayKey(d = new Date()): string {
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+/** 오늘(또는 어제)까지 며칠 연속으로 탐험했는지 */
+export function streakDays(days: string[], today = new Date()): number {
+  const set = new Set(days);
+  const d = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  if (!set.has(dayKey(d))) d.setDate(d.getDate() - 1); // 오늘 아직 안 했으면 어제부터 셈
+  let n = 0;
+  while (set.has(dayKey(d))) {
+    n += 1;
+    d.setDate(d.getDate() - 1);
+  }
+  return n;
+}
+
+/** 오늘 탐험한 날로 기록 (최근 60일만 보관) */
+export function withPlayDay<S extends GameState>(s: S, today = new Date()): S {
+  const key = dayKey(today);
+  if (s.playDays.includes(key)) return s;
+  const playDays = [...s.playDays, key].sort().slice(-60);
+  const draft = { ...s, playDays };
+  const earned = BADGES.filter((b) => !s.badges.includes(b.id) && b.earned(draft)).map((b) => b.id);
+  return { ...draft, badges: [...s.badges, ...earned] };
+}
+
+/** 퀴즈 한 판 결과 반영: 맞힌 문제마다 별 */
+export function applyQuiz<S extends GameState>(prev: S, correct: number, starPer: number) {
+  const stars = prev.stars + correct * starPer;
+  const draft = { ...prev, stars, quizCorrect: prev.quizCorrect + correct };
+  const newBadges = BADGES.filter((b) => !prev.badges.includes(b.id) && b.earned(draft));
+  const next: S = { ...draft, badges: [...prev.badges, ...newBadges.map((b) => b.id)] };
+  const r0 = rankOf(prev.stars).index;
+  const r1 = rankOf(stars).index;
+  return { next, starsGained: stars - prev.stars, newBadges, rankUp: r1 > r0 ? RANKS[r1] : null };
+}
 
 // ── 탐험 미션 ──
 export const MISSION_SLOTS = 3;
 
 const GROUP_WORD: Record<Group, string> = { insect: '곤충', other: '다른 동물' };
-const TOOL_TEXT: Record<Tool, string> = { net: '잠자리채로', scoop: '뜰채로', loupe: '돋보기로' };
-const TOOL_VERB: Record<Tool, string> = { net: '채집', scoop: '채집', loupe: '관찰' };
+const TOOL_TEXT: Record<Tool, string> = { net: '잠자리채로', scoop: '뜰채로', loupe: '돋보기로', binoculars: '쌍안경으로' };
+const TOOL_VERB: Record<Tool, string> = { net: '채집', scoop: '채집', loupe: '관찰', binoculars: '관찰' };
 
 export function missionText(m: Mission): string {
   switch (m.kind) {
@@ -205,6 +256,8 @@ export interface FindEvents {
   /** 미니게임 결과 */
   grade: Grade;
   gradeBonus: number;
+  /** 이번에 받은 카드 */
+  card: Card;
   starsGained: number;
   missionsCompleted: Mission[];
   newBadges: Badge[];
@@ -224,6 +277,7 @@ export function applyFind<S extends GameState>(
   const counts = { ...prev.counts, [creature.id]: before + 1 };
   const shinyMap = shiny ? { ...prev.shiny, [creature.id]: (prev.shiny[creature.id] ?? 0) + 1 } : prev.shiny;
   const gradeBonus = GRADE_BONUS[grade];
+  const card = drawCard(creature.id, { grade, shiny }, rand);
   let stars = prev.stars + (isNew ? STAR_NEW : STAR_AGAIN) + (shiny ? STAR_SHINY : 0) + gradeBonus;
   let missionsDone = prev.missionsDone;
 
@@ -248,6 +302,7 @@ export function applyFind<S extends GameState>(
     stars,
     totalFinds: prev.totalFinds + 1,
     perfects: prev.perfects + (grade === 'perfect' ? 1 : 0),
+    cards: [...prev.cards, card],
     missionsDone,
     missions,
   };
@@ -269,6 +324,7 @@ export function applyFind<S extends GameState>(
       shiny,
       grade,
       gradeBonus,
+      card,
       starsGained: stars - prev.stars,
       missionsCompleted,
       newBadges,

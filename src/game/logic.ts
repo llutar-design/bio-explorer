@@ -86,6 +86,13 @@ export function creaturePosition(spot: PlacedSpot, c: Creature): { x: number; y:
   };
 }
 
+/** 받침이 있으면 '을', 없으면 '를' */
+export function withEulReul(word: string): string {
+  const code = word.charCodeAt(word.length - 1);
+  const has = code >= 0xac00 && code <= 0xd7a3 && (code - 0xac00) % 28 !== 0;
+  return word + (has ? '을' : '를');
+}
+
 /** 받침이 있으면 '이', 없으면 '가' */
 export function withIGa(word: string): string {
   const code = word.charCodeAt(word.length - 1);

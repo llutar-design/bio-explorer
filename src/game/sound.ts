@@ -109,6 +109,21 @@ export const sfx = {
   perfect: safe(() => {
     [1319, 1760, 2093].forEach((f, i) => tone(f, i * 0.06, 0.2, 'triangle', 0.07));
   }),
+  /** 카드 받기 — 등급이 높을수록 화려하게 (0 일반 ~ 4 신화) */
+  card: (g: number) =>
+    safe(() => {
+      if (g <= 0) {
+        tone(1047, 0, 0.12, 'triangle', 0.06);
+        return;
+      }
+      if (g === 1) {
+        [880, 1175].forEach((f, i) => tone(f, i * 0.08, 0.18, 'triangle', 0.07));
+        return;
+      }
+      const notes = g === 2 ? [784, 988, 1175, 1568] : g === 3 ? [659, 784, 988, 1319, 1568, 1976] : [523, 659, 784, 1047, 1319, 1568, 2093, 2637];
+      notes.forEach((f, i) => tone(f, i * 0.09, 0.32, 'triangle', 0.08));
+      if (g >= 3) tone(2093, notes.length * 0.09, 0.8, 'sine', 0.05);
+    })(),
   /** 버튼 톡 */
   tap: safe(() => tone(700, 0, 0.07, 'sine', 0.05)),
 };
